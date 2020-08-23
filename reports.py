@@ -22,11 +22,11 @@ def query_to_excel(sql, file_name, header=None):
     wb.save(file_name)
 
 
-def login_IP_stats(log_date):
-    log_2_db(log_date)
+def login_IP_stats():
+    log_2_db()
 
     sql = """
-select count(NID) as Count_NID, 
+select res_date, count(NID) as Count_NID, 
 case 
 WHEN no_of_logins BETWEEN 1 and 19 Then "< 20" 
 WHEN no_of_logins BETWEEN 20 and 49 Then "20-50" 
@@ -36,15 +36,15 @@ end as "logins",
 count_IP_Address
 FROM
 (
-select NID, count(log_date) as "no_of_logins", count(DISTINCT ip_address) as "count_IP_Address"
+select DATE(log_date) as res_date, NID, count(log_date) as "no_of_logins", count(DISTINCT ip_address) as "count_IP_Address"
 from logs
 WHERE time(log_date) BETWEEN "09:30" and "10:30"
-group by NID 
+group by res_date, NID 
 )
-GROUP BY logins, count_IP_Address
-ORDER by 3 DESC, 1 DESC
+GROUP BY res_date, logins, count_IP_Address
+ORDER by 1 DESC, 4 DESC, 2 DESC
 """
-    out_file = ".\\data\\Login_IP_stats-" + log_date + ".xlsx"
+    out_file = ".\\data\\Login_IP_stats" +  ".xlsx"
     query_to_excel(sql,out_file)
 
 
@@ -89,18 +89,18 @@ def calc_session_duration(nid, out):
     #     print("-->", nid, ":", prev_ip, "session_count: ", session_count, "total Duration: ", total_duration)
 
 
-def high_session_customers(log_date):
+def high_session_customers():
 
-    conn, cursor = open_db()
+    log_2_db()
 
     # check if the log file of that date is loaded?
-    db_date = exec_query(cursor, "select log_date from logs limit 1")
-    if db_date[0][0][:10] != reverse_date(log_date):
-        log_2_db(log_date)
+    # db_date = exec_query(cursor, "select log_date from logs limit 1")
+    # if db_date[0][0][:10] != reverse_date(log_date):
+    #     log_2_db(log_date)
 
     sql = """
 SELECT * from 
-(select NID, count(log_date) as "no_of_logins", count(DISTINCT ip_address) as "count_IP_Address"
+(select DATE(log_date), NID, count(log_date) as "no_of_logins", count(DISTINCT ip_address) as "count_IP_Address"
 from logs
 WHERE time(log_date) BETWEEN "09:30" and "10:30"
 group by NID)
@@ -108,13 +108,15 @@ where no_of_logins > 2 and count_IP_address > 2
 order by 2 DESC
     """
 
-    rows = exec_query(cursor, sql)
-    close_db(cursor)
+    # rows = exec_query(cursor, sql)
+    # close_db(cursor)
 
-    out_file = ".\\data\\High-Logins-customers-" + log_date + ".txt"
-    out = open(out_file, "wt")
-    out.write(f"       log data of NID as of {log_date} having logins from more than one IP between 9:30 am & 10:30 am \r\r")
-    for row in rows:
-        calc_session_duration(row[0], out)
-        out.write("-----------------------------------------------------------------------\r")
-    out.close()
+    #out_file = ".\\data\\High-Logins-customers-" + ".xlsx"
+    # out = open(out_file, "wt")
+    # out.write(f"       log data of NID as of {log_date} having logins from more than one IP between 9:30 am & 10:30 am \r\r")
+    # for row in rows:
+    #     calc_session_duration(row[0], out)
+    #     out.write("-----------------------------------------------------------------------\r")
+    # out.close()
+    out_file = ".\\data\\Login_IP_stats-" + ".xlsx"
+    query_to_excel(sql, out_file)

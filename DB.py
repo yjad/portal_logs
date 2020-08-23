@@ -14,19 +14,19 @@ def open_db():
 
 
 def create_tables(cursor):
-    cmd = "DROP TABLE IF EXISTS logs"
-    cursor.execute(cmd)
+    #cmd = "DROP TABLE IF EXISTS logs"
+    #cursor.execute(cmd)
 
-    #cmd = f'CREATE TABLE IF NOT EXISTS logs' \
-    cmd = f'CREATE TABLE logs' \
-          f'(log_date TEXT,' \
-          f'line_no INTEGER ,' \
-          f'NID TEXT ,' \
-          f'log_type INTEGER,' \
-          f'country	TEXT,' \
-          f'IP_address TEXT,' \
-          f'service TEXT,' \
-          f'success TEXT)'
+    cmd = f'CREATE TABLE IF NOT EXISTS logs' \
+          '(log_date TEXT,' \
+          'node TEXT,' \
+          'line_no INTEGER ,' \
+          'NID TEXT ,' \
+          'log_type INTEGER,' \
+          'country	TEXT,' \
+          'IP_address TEXT,' \
+          'service TEXT,' \
+          'success TEXT)'
     cursor.execute(cmd)
 
     return

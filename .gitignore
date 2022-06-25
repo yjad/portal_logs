@@ -1,3 +1,7 @@
 /data/
 /venv/
 /ServerLogs/
+/data/
+/out/
+/.vscode/
+/__pycache__/

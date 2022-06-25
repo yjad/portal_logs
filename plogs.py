@@ -1,12 +1,12 @@
 import json
 import os
-from DB import insert_row, open_db, close_db, create_tables, exec_cmd, exec_query
+import DB as db 
 from datetime import datetime, timedelta
 
-LOG_FILE_DIR = r".\ServerLogs"
+LOG_FILE_DIR = r".\data\ServerLogs"
 
 
-nid_error_file = r".\data\nid_error.txt"
+nid_error_file = r".\out\nid_error.txt"
 
 
 def reverse_date(log_date):     #dd-mm-yyyy
@@ -24,8 +24,8 @@ def resolve_log_files(log_date):
         d = LOG_FILE_DIR
 
     for folder, subs, files in os.walk(d):
-        if files and files[0][:11] == "server.log.":
-            log_files.append(os.path.join(folder,files[0]))
+        # if files and files[0][:11] == "server.log.":
+        log_files.append(os.path.join(folder,files[0]))
             #print (os.path.join(folder,files[0]))
     return log_files
 
@@ -68,12 +68,12 @@ def get_timestamp(t, service):
 def log_2_db(log_date=None):
 
     log_files = resolve_log_files(log_date)
-    conn, cursor = open_db()
-    create_tables(cursor)
+    conn, cursor = db.open_db()
+    db.create_tables(cursor)
 
     out_error = open(nid_error_file, "wt", encoding='utf-8')
 
-    exec_cmd(cursor, "BEGIN")
+    db.exec_cmd(cursor, "BEGIN")
 
     for log_file in log_files:
         # check if the log file of that date is loaded?
@@ -84,7 +84,7 @@ def log_2_db(log_date=None):
         else:
             x = f"select 1 from logs where DATE(log_date)= '{log_file[-10:]}' limit 1"
         #print (x)
-        db_date = exec_query(cursor, x)
+        db_date = db.exec_query(cursor, x)
         if db_date:
             continue  # already loaded
 
@@ -129,16 +129,112 @@ def log_2_db(log_date=None):
                    "IP_address": ip,
                    "service": service,
                    "success":str(res["success"])}
-            insert_row(conn, cursor, "logs", rec)
+            db.insert_row(conn, cursor, "logs", rec)
 
 
         f.close()
-        exec_cmd(cursor, "END")
+        db.exec_cmd(cursor, "END")
 
     #out.close()
     out_error.close()
-    close_db(cursor)
+    db.close_db(cursor)
 
+
+def log_2_db_error(log_date=None):
+
+    search_tokens = db.query_to_list('SELECT token from error_tokens', return_header=False)
+
+    log_files = resolve_log_files(log_date)
+    print (log_files)
+    conn, cursor = db.open_db()
+    # cursor.execute("DROP TABLE IF EXISTS logs")
+
+    cursor.execute("DELETE FROM logs")
+
+    out_error = open(nid_error_file, "wt", encoding='utf-8')
+
+    for log_file in log_files:
+
+        f = open(log_file, 'rt', encoding='utf-8')
+        line_no = 0
+        while True:
+            txt = f.readline()
+            if not txt:
+                break
+            line_no += 1
+            if line_no % 100000 == 0: print (line_no)
+            log_type = txt[24:29]
+            if log_type in ('INFO ', 'WARN '): continue
+            if log_type == 'ERROR' and txt.find('"nid"') != -1:
+                p = txt.find ("{")
+                v = str(txt[p:])
+                try:
+                    res = json.loads(v)
+                except:
+                    #print (line_no, v)
+                    out_error.write(str(line_no) + "," + log_type + "," + v + txt)
+                    continue
+
+                dt = str(res["datetime"])
+                service = str(res["service"])
+                log_timestamp= get_timestamp(dt, service)
+                ip = res.get("Address", "No IP")
+                if ip != "No IP":
+                    ipa = ip.split(",")
+                    if len(ip) > 0:
+                        ip = ipa[0]
+
+                rec = {"log_date": log_timestamp,
+                    "node": None,
+                    "line_no": line_no,
+                    "NID": str(res["nid"]),
+                    "log_type": log_type ,
+                    "country": res.get("Country", "No Country"),
+                    "IP_address": ip,
+                    "service": service,
+                    "error_categ":str(res["success"]),
+                    "error_line": None}
+                db.insert_row(conn, cursor, "logs", rec)
+                continue
+
+            # Analyze other errors
+            try:
+                dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
+            except:
+                out_error.write(str(line_no) + "," + log_type + "," + txt)
+                continue
+            # search error text for tokens
+            error_categ = "Undefined"
+            categ_found = False
+            for token in search_tokens:
+                if txt.find(token[0]) != -1: 
+                    error_categ = token[0]
+                    txt = None
+                    categ_found = True
+                    break    
+
+            rec = {"log_date": dt,
+                "node": None,
+                "line_no": line_no,
+                "NID": None,
+                "log_type": log_type ,
+                "country": None,
+                "IP_address": None,
+                "service": None,
+                "error_categ":error_categ,
+                "error_line": txt}
+
+            db.insert_row(conn, cursor, "logs", rec)
+
+
+    f.close()
+    conn.commit()
+    out_error.close()
+    db.close_db(cursor)
+
+
+if __name__ == "__main__":
+    log_2_db_error()    
 
 
 

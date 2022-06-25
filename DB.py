@@ -1,5 +1,7 @@
 import sqlite3
 from time import time
+import sys
+
 #from config import config
 MEETING_TABLE = "meetings"
 ATTENDEES_TABLE = "attendees"
@@ -10,13 +12,12 @@ PRINT_INSERT_ERROR = True
 def open_db():
     connection = sqlite3.Connection(DB_FILE_NAME)
     cursor = connection.cursor()
+    create_tables(cursor)
     return connection, cursor
 
 
 def create_tables(cursor):
-    #cmd = "DROP TABLE IF EXISTS logs"
-    #cursor.execute(cmd)
-
+    
     cmd = f'CREATE TABLE IF NOT EXISTS logs' \
           '(log_date TEXT,' \
           'node TEXT,' \
@@ -26,7 +27,8 @@ def create_tables(cursor):
           'country	TEXT,' \
           'IP_address TEXT,' \
           'service TEXT,' \
-          'success TEXT)'
+          'error_categ TEXT,'\
+          'error_line TEXT)'
     cursor.execute(cmd)
 
     return
@@ -53,7 +55,8 @@ def insert_row(conn, cursor, table_name, rec):
             print("Exception class is: ", er.__class__)
             print('SQLite traceback: ')
             exc_type, exc_value, exc_tb = sys.exc_info()
-            print(traceback.format_exception(exc_type, exc_value, exc_tb))
+            print(f"{exc_type} \n {exc_value}, {exc_tb}")
+            # print(traceback.format_exception(exc_type, exc_value, exc_tb))
         return -1
 
 def insert_row_log(conn, cursor, rec):
@@ -83,4 +86,16 @@ def get_col_names(conn, sql):
     col_name = [i[0] for i in get_column_names.description]
     return col_name
 
-
+def query_to_list(cmd, return_header = True):
+    conn, cursor = open_db()
+    rows = exec_query(cursor, cmd)
+    if return_header:
+        if cmd.upper().find("LIMIT") != -1:   # if command have "Limit clause, dont return header
+            header = []
+        else:
+            header = get_col_names(conn, cmd)
+        close_db(cursor)
+        return header, rows
+    else:
+        close_db(cursor)
+        return rows

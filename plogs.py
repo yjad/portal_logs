@@ -1,10 +1,16 @@
 import json
+from operator import index
 import os
+
+from cv2 import line
 import DB as db 
 from datetime import datetime, timedelta
+import pandas as pd
 
-LOG_FILE_DIR = r".\data\ServerLogs"
 
+# LOG_FILE_DIR = r".\data\ServerLogs"
+# LOG_FILE_DIR = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\06-09-2020"
+LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\Reservation-Server-Log"
 
 nid_error_file = r".\out\nid_error.txt"
 
@@ -24,9 +30,11 @@ def resolve_log_files(log_date):
         d = LOG_FILE_DIR
 
     for folder, subs, files in os.walk(d):
+        for f in files: 
         # if files and files[0][:11] == "server.log.":
-        log_files.append(os.path.join(folder,files[0]))
-            #print (os.path.join(folder,files[0]))
+            # print (folder, subs, files)
+            log_files.append(os.path.join(folder,f))
+    # print (log_files)
     return log_files
 
     # for node in os.listdir(d):
@@ -226,15 +234,131 @@ def log_2_db_error(log_date=None):
 
             db.insert_row(conn, cursor, "logs", rec)
 
-
-    f.close()
+        f.close()
     conn.commit()
     out_error.close()
     db.close_db(cursor)
 
+def log_2_pd(log_date=None):
+
+    conn, cursor = db.open_db()
+    search_tokens = pd.read_sql('SELECT token from error_tokens', conn)
+    db.close_db(conn)
+    # print (search_tokens, len (search_tokens))
+    # for token in search_tokens:
+    #     # print ('-----------: ', token)
+    # return None
+
+    log_files = resolve_log_files(log_date)
+
+    print (log_files)
+    # conn, cursor = db.open_db()
+    # cursor.execute("DROP TABLE IF EXISTS logs")
+
+    # cursor.execute("DELETE FROM logs")
+
+    out_error = open(nid_error_file, "wt", encoding='utf-8')
+    log_pd = pd.DataFrame()
+
+    for log_file in log_files:
+
+        f = open(log_file, 'rt', encoding='utf-8')
+        line_no = 0
+        while True:
+            txt = f.readline()
+            if not txt:
+                break
+            line_no += 1
+            # if line_no > 10000: break
+            if line_no % 100000 == 0: print (line_no)
+            log_type = txt[24:29]
+            if log_type in ('INFO ', 'WARN '): continue
+            if log_type == 'ERROR' and txt.find('"nid"') != -1:
+                p = txt.find ("{")
+                v = str(txt[p:])
+                try:
+                    res = json.loads(v)
+                except:
+                    #print (line_no, v)
+                    out_error.write(str(line_no) + "," + log_type + "," + v + txt)
+                    continue
+
+                dt = str(res["datetime"])
+                service = str(res["service"])
+                log_timestamp= get_timestamp(dt, service)
+                ip = res.get("Address", "No IP")
+                if ip != "No IP":
+                    ipa = ip.split(",")
+                    if len(ip) > 0:
+                        ip = ipa[0]
+
+                rec = {"log_date": log_timestamp,
+                    "node": None,
+                    "line_no": line_no,
+                    "NID": str(res["nid"]),
+                    "log_type": log_type ,
+                    "country": res.get("Country", "No Country"),
+                    "IP_address": ip,
+                    "service": service,
+                    "error_categ":str(res["success"]),
+                    "error_line": None}
+                # db.insert_row(conn, cursor, "logs", rec)
+                log_pd = pd.concat([log_pd, pd.DataFrame(rec, index=[0])])
+                continue
+
+            # Analyze other errors
+            try:
+                dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
+            except:
+                out_error.write(str(line_no) + "," + log_type + "," + txt)
+                continue
+            # search error text for tokens
+            error_categ = "Undefined"
+            categ_found = False
+            # print (search_tokens)
+            for token in search_tokens.itertuples():
+                # print (token)
+                if txt.find(token[1]) != -1: 
+                    error_categ = token[1]
+                    txt = None
+                    categ_found = True
+                    break    
+
+            rec = {"log_date": dt,
+                "node": None,
+                "line_no": line_no,
+                "NID": None,
+                "log_type": log_type ,
+                "country": None,
+                "IP_address": None,
+                "service": None,
+                "error_categ":error_categ,
+                "error_line": txt}
+
+            # db.insert_row(conn, cursor, "logs", rec)
+            log_pd = pd.concat([log_pd, pd.DataFrame(rec, index=[0])])
+            
+
+
+        f.close()
+    # conn.commit()
+    out_error.close()
+    return log_pd
+    # db.close_db(cursor)
+
+def print_stats(log_pd):
+    # log_pd[['log_type', 'service', 'error_categ']].groupby(['error_categ']).count().to_excel(r'.\out\log_error_stats.xlsx')
+    # log_pd[['log_type', 'service', 'error_categ']].groupby(['error_categ']).count().to_excel(r'.\out\log_error_stats.xlsx')
+    # print (log_pd.columns)
+    x = log_pd[['log_type', 'service', 'error_categ']].groupby(['error_categ'],as_index = False).count()
+    # print (x)
 
 if __name__ == "__main__":
-    log_2_db_error()    
+    # log_pd = log_2_pd()
+    # log_pd.to_excel(r'.\out\log_error.xlsx')
+    # print_stats(log_pd)    
+    log_2_db_error()
+    # resolve_log_files(None)
 
 
 

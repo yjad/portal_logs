@@ -12,8 +12,10 @@ import pandas as pd
 # LOG_FILE_DIR = r".\data\ServerLogs"
 # LOG_FILE_DIR = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\06-09-2020"
 LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\Reservation-Server-Log"
-LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
+# LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
 # LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log\27-06"
+# LOG_FILE_DIR = r"C:\Users\yahia\Downloads\portal logs"
+LOG_FILE_DIR = r"C:\Yahia\Python\portal_logs\data\Serverlogs\Reservation-Server-Log"
 
 nid_error_file = r".\out\nid_error.txt"
 
@@ -37,6 +39,7 @@ def resolve_log_files(log_date):
         # if files and files[0][:11] == "server.log.":
             # print (folder, subs, files)
             log_files.append(os.path.join(folder,f))
+            break           # ----------- debug, one file
     # print (log_files)
     return log_files
 
@@ -245,23 +248,23 @@ def log_2_db_error(log_date=None):
 def log_2_pd(log_date=None):
 
     conn, cursor = db.open_db()
-    search_tokens = pd.read_sql('SELECT token, categ from error_tokens', conn)
+    search_tokens = pd.read_sql('SELECT token, categ from error_token ORDER BY prio', conn)
     db.close_db(conn)
-    # print (search_tokens, len (search_tokens))
-    # for token in search_tokens:
-    #     # print ('-----------: ', token)
-    # return None
+    
 
     log_files = resolve_log_files(log_date)
 
-    # print (log_files)
-    # conn, cursor = db.open_db()
-    # cursor.execute("DROP TABLE IF EXISTS logs")
-
-    # cursor.execute("DELETE FROM logs")
-
     out_error = open(nid_error_file, "wt", encoding='utf-8')
-    log_pd = pd.DataFrame()
+    col = ["log_date","node","line_no", "NID", "log_type" , 
+                    "country",
+                    "IP_address",
+                    "service",
+                    "token",    #str(res["success"]),
+                    "categ",    #str(res["success"]),
+                    "error_line"]
+    log_pd = pd.DataFrame(columns=col)
+    # log_pd = pd.DataFrame()
+    print (log_pd)
 
     for log_file in log_files:
         # print (log_file)
@@ -272,8 +275,8 @@ def log_2_pd(log_date=None):
             if not txt:
                 break
             line_no += 1
-            # if line_no > 5000: break
-            if line_no % 10000 == 0: print (line_no)
+            if line_no > 5000: break
+            if line_no % 1000 == 0: print (line_no)
             log_type = txt[24:29]
             if log_type in ('INFO ', 'WARN '): continue
             if log_type == 'ERROR' and txt.find('"nid"') != -1:
@@ -306,8 +309,10 @@ def log_2_pd(log_date=None):
                     "token": token,    #str(res["success"]),
                     "categ": 'user',    #str(res["success"]),
                     "error_line": None}
-                # db.insert_row(conn, cursor, "logs", rec)
-                log_pd = pd.concat([log_pd, pd.DataFrame(rec, index=[0])])
+                # log_pd = pd.concat([log_pd, pd.DataFrame(rec, index=[0])])
+                log_pd = pd.concat([log_pd, pd.Series(rec)], ignore_index=True)
+                # print (len(log_pd))
+                # log_pd = pd.concat([log_pd, pd.Series(rec)])
                 continue
 
             # Analyze other errors
@@ -321,7 +326,7 @@ def log_2_pd(log_date=None):
             categ_found = False
             # print (search_tokens)
             for token in search_tokens.itertuples():
-                # print (token)
+                # print (token[1])
                 if txt.find(token[1]) != -1: 
                     error_token = token[1]
                     error_categ = token[2]
@@ -340,37 +345,71 @@ def log_2_pd(log_date=None):
                 "token":error_token,
                 "categ":error_categ,
                 "error_line": txt}
-
-            # db.insert_row(conn, cursor, "logs", rec)
-            log_pd = pd.concat([log_pd, pd.DataFrame(rec, index=[0])])
-        # print (len(log_pd))
-        # break   # debug - process first file only
-            
-
-
+            rec_lst = [dt, None, line_no, None, log_type, None, None, None, error_token, error_categ, txt]
+            # log_pd.iloc[line_no] = rec_lst
+            # log_pd = pd.concat([log_pd, pd.Series(rec)])
+            # log_pd = pd.concat([log_pd, pd.DataFrame(rec, index=[0])], ignore_index=True)
+        
     # f.close()
     # conn.commit()
     out_error.close()
     return log_pd
     # db.close_db(cursor)
 
+def update_prio(log_df):
+
+    print (log_df.columns)
+    x = log_df[['token', 'line_no']].fillna('x').\
+            groupby(['token'],as_index = False).count().sort_values(by='line_no', ascending=False)
+    
+    x.to_csv('.\\out\\token prio.csv', index = False)
+    conn, cursor = db.open_db()
+    db.exec_cmd(cursor, "UPDATE error_token set prio = 99")
+    i = 0
+    for r in x.iterrows():
+        cmd = f'UPDATE error_token set prio = {i} WHERE token = "{r[1][0]}"'
+        # print (cmd)
+        db.exec_cmd(cursor, cmd)
+        i = i + 1
+
+    conn.commit()
+    db.close_db(cursor)
+
+
+def append_stats(log_df):
+
+    conn, cursor = db.open_db()
+
+    log_df['dt'] = pd.to_datetime(x['log_date']).dt.date  
+    x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
+    x.to_sql('log_stats', conn, if_exists = 'append')
+
+    db.close_db(cursor)
+
+
 def print_stats(log_df):
 
     x = log_df[log_df.categ== 'user']
     
-    # x['dt'] = pd.to_datetime(x.log_date).dt.date
     x['dt'] = pd.to_datetime(x['log_date']).dt.date  
-    x = x[['dt', 'token','categ', 'line_no']].fillna('x').\
-        groupby(['dt', 'token','categ'],as_index = False).count()
+    x = x[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
     x.to_csv('.\\out\\log_stats.csv', index = False)
+   
+    log_df.to_csv('.\\out\\log_df.csv', index = False)
     print (x)
+   
 
 if __name__ == "__main__":
-    log_pd = log_2_pd()
-    log_pd.to_csv(r'.\out\log_errors.csv')
-    print_stats(log_pd)    
-    # log_2_db_error()
-    # resolve_log_files(None)
+    log_df = log_2_pd()
+    print ('Update Prio ....')
+    update_prio(log_df)
+    print ('write log.csv ....')
+    log_df.to_csv(r'.\out\log_errors.csv')
+    print ('Print Stats ....')
+    print_stats(log_df)   
+    append_stats(log_df)
+
+  
 
 
 

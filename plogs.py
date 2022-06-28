@@ -389,6 +389,22 @@ def print_stats(log_df):
     log_df.to_csv('.\\out\\log_df.csv', index = False)
     print (x)
    
+def export_email_quota_graph():
+    conn, cursor = db.open_db()
+    cmd = """
+select * from 
+(select dt, sum(line_no) '# logins' from log_stats where token = 'Login Success' group by dt)
+left join
+(select dt, sum(line_no) '# email quota errors' from log_stats where token = 'MailSendException' group by dt)
+using (dt)
+"""
+    df = pd.read_sql(cmd, conn)
+    cursor.close()
+
+    fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
+            xlabel = 'Date', ylabel = '# of customers').get_figure()
+
+    fig.savefig(r'.\out\email quota.jpg')
 
 if __name__ == "__main__":
     log_df = log_2_pd()

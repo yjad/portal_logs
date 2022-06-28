@@ -26,26 +26,19 @@ def reverse_date(log_date):     #dd-mm-yyyy
     return  log_date_r
 
 
-def resolve_log_files(log_date):
+def resolve_log_files(file_path):
     log_files = []
 
-    if log_date:
-        d = os.path.join(LOG_FILE_DIR, log_date)
-        #print (d)
-    else:
-        d = LOG_FILE_DIR
+    # if log_date:
+    #     d = os.path.join(LOG_FILE_DIR, log_date)
+    #     #print (d)
+    # else:
+    #     d = LOG_FILE_DIR
 
-    for folder, subs, files in os.walk(d):
+    for folder, subs, files in os.walk(file_path):
         for f in files: 
-        # if files and files[0][:11] == "server.log.":
-            # print (folder, subs, files)
             log_files.append(os.path.join(folder,f))
-            # break           # ----------- debug, one file
-    # print (log_files)
-    # log_files= [r"C:\Users\yahia\Downloads\Reservation-Server-Log\18-06.txt"]
     return log_files
-
-
 
 
 def get_timestamp(t, service):
@@ -230,23 +223,20 @@ def log_2_db_error(log_date=None):
     out_error.close()
     db.close_db(cursor)
 
-def log_2_pd(log_date=None):
+def log_2_df(file_path):
 
     conn, cursor = db.open_db()
     search_tokens = pd.read_sql('SELECT token, categ, prio from error_token ORDER BY prio', conn)
     db.close_db(conn)
     
-
-    log_files = resolve_log_files(log_date)
+    if os.path.isdir(file_path):
+        log_files = resolve_log_files(file_path)
+    else:
+        log_files = [file_path]
 
     out_error = open(nid_error_file, "wt", encoding='utf-8')
     col = ["log_date","node","line_no", "NID", "log_type" , 
-                    "country",
-                    "IP_address",
-                    "service",
-                    "token",    #str(res["success"]),
-                    "categ",    #str(res["success"]),
-                    "error_line"]
+                    "country", "IP_address", "service", "token", "categ", "error_line"]
     # log_pd = pd.DataFrame(columns=col)
     log_pd = pd.DataFrame()
     log_lst = []
@@ -389,16 +379,54 @@ def print_stats(log_df):
     log_df.to_csv('.\\out\\log_df.csv', index = False)
     print (x)
    
+def export_email_quota_graph():
+    conn, cursor = db.open_db()
+    cmd = """
+select * from 
+(select dt, sum(line_no) '# logins' from log_stats where token = 'Login Success' group by dt)
+left join
+(select dt, sum(line_no) '# email quota errors' from log_stats where token = 'MailSendException' group by dt)
+using (dt)
+"""
+    df = pd.read_sql(cmd, conn)
+    cursor.close()
 
+    fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
+            xlabel = 'Date', ylabel = '# of customers').get_figure()
+
+    fig.savefig(r'.\out\email quota.jpg')
+
+
+def load_error_files(fpath):
+    log_df = log_2_df (fpath)
+    # get dates in files and delete exisiting stats for this date
+    log_dates = pd.to_datetime(log_df['log_date']).dt.strftime('%Y-%m-%d').value_counts().sort_values(ascending=False).index[0]
+
+    conn, cursor = db.open_db()
+
+    db.exec_cmd(cursor, f"DELETE FROM log_stats WHERE dt = '{log_dates}'")
+
+    log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date  
+    x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
+    x.to_sql('log_stats', conn, if_exists = 'append')
+
+    db.close_db(cursor)
+
+
+    
 if __name__ == "__main__":
-    log_df = log_2_pd()
-    print ('Update Prio ....')
-    # update_prio(log_df)
-    print ('write log.csv ....')
-    log_df.to_csv(r'.\out\log_errors.csv')
-    print ('Print Stats ....')
-    print_stats(log_df)   
-    append_stats(log_df)
+    # log_df = log_2_pd()
+    # print ('Update Prio ....')
+    # # update_prio(log_df)
+    # print ('write log.csv ....')
+    # log_df.to_csv(r'.\out\log_errors.csv')
+    # print ('Print Stats ....')
+    # print_stats(log_df)   
+    # append_stats(log_df)
+
+    fpath = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\2022-06-28"
+    load_error_files(fpath)
+    export_email_quota_graph()
 
   
 

@@ -12,10 +12,11 @@ import pandas as pd
 # LOG_FILE_DIR = r".\data\ServerLogs"
 # LOG_FILE_DIR = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\06-09-2020"
 LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\Reservation-Server-Log"
-# LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
+LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
 # LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log\27-06"
 # LOG_FILE_DIR = r"C:\Users\yahia\Downloads\portal logs"
-LOG_FILE_DIR = r"C:\Yahia\Python\portal_logs\data\Serverlogs\Reservation-Server-Log"
+# LOG_FILE_DIR = r"C:\Yahia\Python\portal_logs\data\Serverlogs\Reservation-Server-Log"
+LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\files Logs"
 
 nid_error_file = r".\out\nid_error.txt"
 
@@ -39,28 +40,12 @@ def resolve_log_files(log_date):
         # if files and files[0][:11] == "server.log.":
             # print (folder, subs, files)
             log_files.append(os.path.join(folder,f))
-            break           # ----------- debug, one file
+            # break           # ----------- debug, one file
     # print (log_files)
+    # log_files= [r"C:\Users\yahia\Downloads\Reservation-Server-Log\18-06.txt"]
     return log_files
 
-    # for node in os.listdir(d):
-    #     if node[:4] == "node":
-    #         p = os.path.join(LOG_FILE_DIR, log_date, node, "Web Application", "server.log." + reverse_date(log_date))
-    #     else:
-    #         p = os.path.join(LOG_FILE_DIR, node) # one node log
-    #     log_files.append(p)
-    #     print(p)
-    # else: # load all logs in the folder
-    #     for log_date_dir in os.listdir(LOG_FILE_DIR):
-    #         for node in os.listdir(os.path.join(LOG_FILE_DIR, log_date_dir)):
-    #             if node[:4] == "node":
-    #                 p = os.path.join(LOG_FILE_DIR, log_date, node, "Web Application", "server.log." + log_date_r)
-    #             else:
-    #                 p = os.path.join(LOG_FILE_DIR, node)
-    #             log_files.append(p)
-    #             print(p)
-    #
-    # return log_files
+
 
 
 def get_timestamp(t, service):
@@ -248,7 +233,7 @@ def log_2_db_error(log_date=None):
 def log_2_pd(log_date=None):
 
     conn, cursor = db.open_db()
-    search_tokens = pd.read_sql('SELECT token, categ from error_token ORDER BY prio', conn)
+    search_tokens = pd.read_sql('SELECT token, categ, prio from error_token ORDER BY prio', conn)
     db.close_db(conn)
     
 
@@ -262,12 +247,13 @@ def log_2_pd(log_date=None):
                     "token",    #str(res["success"]),
                     "categ",    #str(res["success"]),
                     "error_line"]
-    log_pd = pd.DataFrame(columns=col)
-    # log_pd = pd.DataFrame()
-    print (log_pd)
+    # log_pd = pd.DataFrame(columns=col)
+    log_pd = pd.DataFrame()
+    log_lst = []
+    # print (log_pd)
 
     for log_file in log_files:
-        # print (log_file)
+        print (log_file)
         f = open(log_file, 'rt', encoding='utf-8')
         line_no = 0
         while True:
@@ -275,90 +261,95 @@ def log_2_pd(log_date=None):
             if not txt:
                 break
             line_no += 1
-            if line_no > 5000: break
-            if line_no % 1000 == 0: print (line_no)
+            # if line_no > 10000: break
+            if line_no % 10000 == 0: print (line_no)
             log_type = txt[24:29]
             if log_type in ('INFO ', 'WARN '): continue
+            rec = None
             if log_type == 'ERROR' and txt.find('"nid"') != -1:
-                p = txt.find ("{")
-                v = str(txt[p:])
-                try:
-                    res = json.loads(v)
-                except:
-                    #print (line_no, v)
-                    out_error.write(str(line_no) + "," + log_type + "," + v + txt)
-                    continue
+                rec = parse_nid_rec(txt, line_no, out_error)
+                # pass
+            else:
+                rec  = parse_tech_rec(txt, line_no, out_error, search_tokens)
+                # pass
 
-                dt = str(res["datetime"])
-                service = str(res["service"])
-                log_timestamp= get_timestamp(dt, service)
-                ip = res.get("Address", "No IP")
-                if ip != "No IP":
-                    ipa = ip.split(",")
-                    if len(ip) > 0:
-                        ip = ipa[0]
-                token = 'Login Success' if res['success'] else 'Login Failed'
-                rec = {"log_date": log_timestamp,
-                    "node": None,
-                    "line_no": line_no,
-                    "NID": str(res["nid"]),
-                    "log_type": log_type ,
-                    "country": res.get("Country", "No Country"),
-                    "IP_address": ip,
-                    "service": service,
-                    "token": token,    #str(res["success"]),
-                    "categ": 'user',    #str(res["success"]),
-                    "error_line": None}
-                # log_pd = pd.concat([log_pd, pd.DataFrame(rec, index=[0])])
-                log_pd = pd.concat([log_pd, pd.Series(rec)], ignore_index=True)
-                # print (len(log_pd))
-                # log_pd = pd.concat([log_pd, pd.Series(rec)])
-                continue
+            if not rec: continue
+  
+            log_lst.append(rec)      
 
-            # Analyze other errors
-            try:
-                dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
-            except:
-                out_error.write(str(line_no) + "," + log_type + "," + txt)
-                continue
-            # search error text for tokens
-            error_categ = "Undefined"
-            categ_found = False
-            # print (search_tokens)
-            for token in search_tokens.itertuples():
-                # print (token[1])
-                if txt.find(token[1]) != -1: 
-                    error_token = token[1]
-                    error_categ = token[2]
-                    txt = None
-                    categ_found = True
-                    break    
-
-            rec = {"log_date": dt,
-                "node": None,
-                "line_no": line_no,
-                "NID": None,
-                "log_type": log_type ,
-                "country": None,
-                "IP_address": None,
-                "service": None,
-                "token":error_token,
-                "categ":error_categ,
-                "error_line": txt}
-            rec_lst = [dt, None, line_no, None, log_type, None, None, None, error_token, error_categ, txt]
-            # log_pd.iloc[line_no] = rec_lst
-            # log_pd = pd.concat([log_pd, pd.Series(rec)])
-            # log_pd = pd.concat([log_pd, pd.DataFrame(rec, index=[0])], ignore_index=True)
-        
-    # f.close()
-    # conn.commit()
     out_error.close()
+    log_pd = pd.DataFrame(log_lst, columns = col)
     return log_pd
-    # db.close_db(cursor)
+
+def parse_nid_rec(txt, line_no, out_error):
+
+    p = txt.find ("{")
+    v = str(txt[p:])
+    try:
+        res = json.loads(v)
+        dt = str(res["datetime"])
+        service = str(res["service"])
+        log_timestamp= get_timestamp(dt, service)
+        ip = res.get("Address", "No IP")
+        if ip != "No IP":
+            ipa = ip.split(",")
+            if len(ip) > 0:
+                ip = ipa[0]
+        token = 'Login Success' if res['success'] else 'Login Failed'
+        nid = str(res["nid"])
+        cntry = res.get("Country", "No Country")
+    except Exception as e:
+        if v.find('"success":false'):   # handle invalid JSON format for some records
+            log_timestamp = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
+            token = 'Login Failed'
+            service = 'Login*'
+            ip = None
+            nid = None
+            cntry = None
+        else:
+            # print ('***', line_no, v)
+            out_error.write('NID '+str(line_no) + ", ERROR," + str(e) +"||"+ v)
+            return None
+
+    log_type = 'ERROR'
+    error_categ = 'user'
+    rec_lst = [log_timestamp, None, line_no, nid, log_type, cntry, ip, service, token, error_categ, None]
+    return rec_lst
+
+def parse_tech_rec(txt, line_no, out_error, search_tokens):
+    try:
+        dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
+    except:
+        out_error.write('TECH, '+ str(line_no) + ", ERROR," + txt)
+        return None
+    # search error text for tokens
+    error_categ = "Undefined"
+    # print (search_tokens)
+    # token_found = False
+    for token in search_tokens.itertuples():
+        if txt.find(token[1]) != -1:
+            # print (token, "------->", token[1]) 
+            error_token = token[1]
+            error_categ = token[2]
+            txt = None
+            break    
+
+    if txt: #categ not found
+        print (f"{line_no} - txt is not null, ", txt)
+        out_error.write("Unclassified: "+txt)
+        error_token = "Unclassified"
+        error_categ = 'Unclassified'
+        #  return None
+    log_type = 'ERROR'
+    rec_lst = [dt, None, line_no, None, log_type, None, None, None, error_token, error_categ, txt]
+
+    return rec_lst
+
 
 def update_prio(log_df):
 
     print (log_df.columns)
+
     x = log_df[['token', 'line_no']].fillna('x').\
             groupby(['token'],as_index = False).count().sort_values(by='line_no', ascending=False)
     
@@ -380,7 +371,7 @@ def append_stats(log_df):
 
     conn, cursor = db.open_db()
 
-    log_df['dt'] = pd.to_datetime(x['log_date']).dt.date  
+    log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date  
     x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
     x.to_sql('log_stats', conn, if_exists = 'append')
 
@@ -402,7 +393,7 @@ def print_stats(log_df):
 if __name__ == "__main__":
     log_df = log_2_pd()
     print ('Update Prio ....')
-    update_prio(log_df)
+    # update_prio(log_df)
     print ('write log.csv ....')
     log_df.to_csv(r'.\out\log_errors.csv')
     print ('Print Stats ....')

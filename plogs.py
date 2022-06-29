@@ -396,7 +396,6 @@ using (dt)
 
     fig.savefig(r'.\out\email quota.jpg')
 
-
 def load_error_files(fpath):
     log_df = log_2_df (fpath)
     # get dates in files and delete exisiting stats for this date

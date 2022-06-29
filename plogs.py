@@ -285,14 +285,20 @@ def parse_nid_rec(txt, line_no, out_error):
             ipa = ip.split(",")
             if len(ip) > 0:
                 ip = ipa[0]
-        token = 'Login Success' if res['success'] else 'Login Failed'
+        # if res['success']:
+        #     token = 'Login Success' if service == 'login' else 'Logout Success'
+        # elif not res['success']: 
+        #     token = 'Login Failed' if service == 'login' else 'Logout Failed'
+        # else:
+        #     token = service
+        token = service + " " + str(res['success'])
         nid = str(res["nid"])
         cntry = res.get("Country", "No Country")
     except Exception as e:
         if v.find('"success":false'):   # handle invalid JSON format for some records
             log_timestamp = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
-            token = 'Login Failed'
-            service = 'Login*'
+            token = 'login False'
+            service = 'login'
             ip = None
             nid = None
             cntry = None
@@ -325,7 +331,7 @@ def parse_tech_rec(txt, line_no, out_error, search_tokens):
             break    
 
     if txt: #categ not found
-        print (f"{line_no} - txt is not null, ", txt)
+        # print (f"{line_no} - txt is not null, ", txt)
         out_error.write("Unclassified: "+txt)
         error_token = "Unclassified"
         error_categ = 'Unclassified'
@@ -383,7 +389,7 @@ def export_email_quota_graph():
     conn, cursor = db.open_db()
     cmd = """
 select * from 
-(select dt, sum(line_no) '# logins' from log_stats where token = 'Login Success' group by dt)
+(select dt, sum(line_no) '# logins' from log_stats where token = 'login True' group by dt)
 left join
 (select dt, sum(line_no) '# email quota errors' from log_stats where token = 'MailSendException' group by dt)
 using (dt)
@@ -392,24 +398,31 @@ using (dt)
     cursor.close()
 
     fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
-            xlabel = 'Date', ylabel = '# of customers').get_figure()
+            xlabel = 'Date', ylabel = '# of customers', figsize = (7,5)).get_figure()
 
     fig.savefig(r'.\out\email quota.jpg')
 
-def load_error_files(fpath):
+def load_error_files(fpath, load_db=True):
     log_df = log_2_df (fpath)
     # get dates in files and delete exisiting stats for this date
     log_dates = pd.to_datetime(log_df['log_date']).dt.strftime('%Y-%m-%d').value_counts().sort_values(ascending=False).index[0]
 
-    conn, cursor = db.open_db()
+    if load_db:
+        conn, cursor = db.open_db()
 
-    db.exec_cmd(cursor, f"DELETE FROM log_stats WHERE dt = '{log_dates}'")
+        db.exec_cmd(cursor, f"DELETE FROM log_stats WHERE dt = '{log_dates}'")
 
-    log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date  
-    x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
-    x.to_sql('log_stats', conn, if_exists = 'append')
-
-    db.close_db(cursor)
+        log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date  
+        x = log_df[['dt', 'token','categ','line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
+        x.to_sql('log_stats', conn, if_exists = 'append')
+        db.close_db(cursor)
+    else:
+        log_df.to_csv('.\\out\log_df.csv')
+        log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date  
+        x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
+        x.to_csv(r'.\out\log_stats.csv')
+        print (x)
+   
 
 
     
@@ -423,8 +436,16 @@ if __name__ == "__main__":
     # print_stats(log_df)   
     # append_stats(log_df)
 
-    fpath = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\2022-06-28"
-    load_error_files(fpath)
+    # fpath = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\2022-06-28"
+    # load_error_files(fpath)
+    # export_email_quota_graph()
+
+    # fpath = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\2022-06-28"
+    # fpath = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\16-06-2020\node1\Web Application\server.log.2020-06-16"
+    fpath = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\sherif28.txt"
+    fpath = r"C:\Users\yahia\Downloads\Reservation-Server-Log\files Logs"
+    # fpath = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
+    # load_error_files(fpath, load_db= True)
     export_email_quota_graph()
 
   

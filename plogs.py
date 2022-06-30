@@ -1,3 +1,4 @@
+from genericpath import isfile
 import json
 from operator import index
 import os
@@ -229,10 +230,16 @@ def log_2_df(file_path):
     search_tokens = pd.read_sql('SELECT token, categ, prio from error_token ORDER BY prio', conn)
     db.close_db(conn)
     
-    if os.path.isdir(file_path):
-        log_files = resolve_log_files(file_path)
-    else:
-        log_files = [file_path]
+   
+    if type(file_path) == str :
+        file_type = 'file'
+        if os.path.isdir(file_path):
+            log_files = resolve_log_files(file_path)
+        else:
+            log_files = [file_path]
+    else:   # buffer of one or more files
+        log_files = file_path
+        file_type = 'buffer'
 
     out_error = open(nid_error_file, "wt", encoding='utf-8')
     col = ["log_date","node","line_no", "NID", "log_type" , 
@@ -243,27 +250,41 @@ def log_2_df(file_path):
     # print (log_pd)
 
     for log_file in log_files:
-        print (log_file)
-        f = open(log_file, 'rt', encoding='utf-8')
+        if file_type == 'file':
+            f = open(log_file, 'rt', encoding='utf-8')
+            print (log_file)
+        else:
+            f= log_file
+            print (log_file.name)
+        
         line_no = 0
         while True:
             txt = f.readline()
+
             if not txt:
                 break
             line_no += 1
-            # if line_no > 10000: break
+            if file_type == 'buffer':
+                txt = txt.decode('utf-8')
+
+            # if line_no > 100: break
             if line_no % 10000 == 0: print (line_no)
             log_type = txt[24:29]
             if log_type in ('INFO ', 'WARN '): continue
+            try:
+                dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
+            except:
+                out_error.write('***Invalid record format***, '+ str(line_no) + ", ERROR," + str(txt))
+                continue    # Invalid record format, ignore rest of parsing
             rec = None
             if log_type == 'ERROR' and txt.find('"nid"') != -1:
-                rec = parse_nid_rec(txt, line_no, out_error)
+                rec = parse_nid_rec(txt, line_no, out_error, dt)
                 # pass
             else:
-                rec  = parse_tech_rec(txt, line_no, out_error, search_tokens)
+                rec  = parse_tech_rec(txt, line_no, out_error, search_tokens, dt)
                 # pass
 
-            if not rec: continue
+            if not rec: continue    # invalid line, skip it
   
             log_lst.append(rec)      
 
@@ -271,15 +292,17 @@ def log_2_df(file_path):
     log_pd = pd.DataFrame(log_lst, columns = col)
     return log_pd
 
-def parse_nid_rec(txt, line_no, out_error):
+
+
+def parse_nid_rec(txt, line_no, out_error, log_timestamp):
 
     p = txt.find ("{")
     v = str(txt[p:])
     try:
         res = json.loads(v)
-        dt = str(res["datetime"])
+        # dt = str(res["datetime"])
         service = str(res["service"])
-        log_timestamp= get_timestamp(dt, service)
+        # log_timestamp= get_timestamp(dt, service)
         ip = res.get("Address", "No IP")
         if ip != "No IP":
             ipa = ip.split(",")
@@ -291,33 +314,35 @@ def parse_nid_rec(txt, line_no, out_error):
         #     token = 'Login Failed' if service == 'login' else 'Logout Failed'
         # else:
         #     token = service
-        token = service + " " + str(res['success'])
+        x = service + " " + str(res['success'])
+        match x:
+            case 'login True':  token = 'Logins'
+            case 'login False':  token = 'Failed Logins'
+            case 'logout True':  token = 'Logout'
+            case _: token = x
+
         nid = str(res["nid"])
         cntry = res.get("Country", "No Country")
     except Exception as e:
+        ip = None
+        nid = None
+        cntry = None
         if v.find('"success":false'):   # handle invalid JSON format for some records
-            log_timestamp = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
-            token = 'login False'
+            token = 'Failed Logins' 
             service = 'login'
-            ip = None
-            nid = None
-            cntry = None
-        else:
+        else:   # unhandled line
             # print ('***', line_no, v)
             out_error.write('NID '+str(line_no) + ", ERROR," + str(e) +"||"+ v)
-            return None
+            token = "Unclassified"
+            service = 'Unclassified'
 
     log_type = 'ERROR'
     error_categ = 'user'
     rec_lst = [log_timestamp, None, line_no, nid, log_type, cntry, ip, service, token, error_categ, None]
     return rec_lst
 
-def parse_tech_rec(txt, line_no, out_error, search_tokens):
-    try:
-        dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
-    except:
-        out_error.write('TECH, '+ str(line_no) + ", ERROR," + txt)
-        return None
+def parse_tech_rec(txt, line_no, out_error, search_tokens, dt):
+    
     # search error text for tokens
     error_categ = "Undefined"
     # print (search_tokens)
@@ -389,7 +414,7 @@ def export_email_quota_graph():
     conn, cursor = db.open_db()
     cmd = """
 select * from 
-(select dt, sum(line_no) '# logins' from log_stats where token = 'login True' group by dt)
+(select dt, sum(line_no) '# logins' from log_stats where token = 'Logins' group by dt)
 left join
 (select dt, sum(line_no) '# email quota errors' from log_stats where token = 'MailSendException' group by dt)
 using (dt)
@@ -400,28 +425,39 @@ using (dt)
     fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
             xlabel = 'Date', ylabel = '# of customers', figsize = (7,5)).get_figure()
 
+    # fig.show()
     fig.savefig(r'.\out\email quota.jpg')
+    return df
 
-def load_error_files(fpath, load_db=True):
+def load_portal_logs(fpath, load_db=True):
     log_df = log_2_df (fpath)
-    # get dates in files and delete exisiting stats for this date
-    log_dates = pd.to_datetime(log_df['log_date']).dt.strftime('%Y-%m-%d').value_counts().sort_values(ascending=False).index[0]
 
     if load_db:
+        # get dates in files and delete exisiting stats for this date
+        # log_dates = pd.to_datetime(log_df['log_date']).dt.strftime('%Y-%m-%d').value_counts().sort_values(ascending=False)#.index[0]
+        log_dates = pd.to_datetime(log_df['log_date']).dt.strftime('%Y-%m-%d').drop_duplicates()
+        log_dates_str = '"' +'","'.join(list(log_dates))+ '"'
         conn, cursor = db.open_db()
-
-        db.exec_cmd(cursor, f"DELETE FROM log_stats WHERE dt = '{log_dates}'")
+        db.exec_cmd(cursor, f"DELETE FROM log_stats WHERE dt in ({log_dates_str})")
 
         log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date  
         x = log_df[['dt', 'token','categ','line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
         x.to_sql('log_stats', conn, if_exists = 'append')
         db.close_db(cursor)
     else:
-        log_df.to_csv('.\\out\log_df.csv')
         log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date  
-        x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
-        x.to_csv(r'.\out\log_stats.csv')
+        x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count().\
+            sort_values(by=['dt', 'categ', 'line_no'], ascending=False)
+       
         print (x)
+
+    out_path = r'.\out'
+    if type(fpath) == str:
+        out_file_path = os.path.join(out_path, datetime.today().strftime('%Y-%m-%d')+ '_' + os.path.basename(fpath)+  '.csv')
+    else:
+        base_name= os.path.basename(fpath[0].name)
+        out_file_path = os.path.join(out_path, datetime.today().strftime('%Y-%m-%d')+ '_' + base_name+ '.csv')
+    log_df.to_csv(out_file_path)
    
 
 
@@ -442,19 +478,13 @@ if __name__ == "__main__":
 
     # fpath = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\2022-06-28"
     # fpath = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\16-06-2020\node1\Web Application\server.log.2020-06-16"
-    fpath = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\sherif28.txt"
-    fpath = r"C:\Users\yahia\Downloads\Reservation-Server-Log\files Logs"
+    # fpath = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\sherif28.txt"
+    # fpath = r"C:\Users\yahia\Downloads\Reservation-Server-Log\files Logs"
     # fpath = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
-    # load_error_files(fpath, load_db= True)
-    export_email_quota_graph()
-
-  
-
-
-
-
-
-
-
-
-
+    # fpath = "C:\Yahia\Python\portal_logs\ServerLogs\sherif28.txt"
+    # fpath = r"C:\Yahia\Python\portal_logs\ServerLogs\files Logs"
+    # fpath = "C:\Yahia\Python\portal_logs\ServerLogs\Reservation-Server-Log"
+    fpath = r"C:\Yahia\Python\portal_logs\ServerLogs\26-07-2020\server.log.2020-07-26"
+    fpath = r"C:\Yahia\Python\portal_logs\ServerLogs\06-09-2020"
+    # export_email_quota_graph()
+    load_portal_logs(fpath, load_db=True)

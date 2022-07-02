@@ -227,10 +227,11 @@ def log_2_db_error(log_date=None):
 
 def log_2_df(file_path):
 
-    conn, cursor = db.open_db()
-    search_tokens = pd.read_sql('SELECT token, categ, prio from error_token ORDER BY prio', conn)
-    db.close_db(conn)
-    
+    # conn, cursor = db.open_db()
+    # search_tokens = pd.read_sql('SELECT token, categ, prio from error_token ORDER BY prio', conn)
+    # db.close_db(conn)
+    search_tokens = pd.read_csv(r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data\tokens.csv")
+    # print (search_tokens)
    
     if type(file_path) == str :
         file_type = 'file'

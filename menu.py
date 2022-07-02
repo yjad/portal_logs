@@ -36,6 +36,7 @@ match selected:
         if st.button('Process ...'):
             pd = logs.summerize_portal_logs(uploaded_files, load_db=False)
             # st.dataframe(pd)
+            st.success("File extraced ...")
     case 'Big Log>200MB to csv':
         filename = st.text_input(label = "Enter file path:")
         if st.button('Process ...'):

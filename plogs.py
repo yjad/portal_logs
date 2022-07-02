@@ -5,6 +5,7 @@ import os
 from re import X
 
 from cv2 import line
+from numpy import int32
 import DB as db 
 from datetime import datetime, timedelta
 import pandas as pd
@@ -399,6 +400,7 @@ def append_stats(log_df):
     db.close_db(cursor)
 
 
+
 def print_stats(log_df):
 
     x = log_df[log_df.categ== 'user']
@@ -429,7 +431,8 @@ using (dt)
     fig.savefig(r'.\out\email quota.jpg')
     return df
 
-def load_portal_logs(fpath, load_db=True):
+# summerize log file(s). Load logins summary into DB and save summary csv file with  
+def summerize_portal_logs(fpath, load_db=True):
     log_df = log_2_df (fpath)
 
     if load_db:
@@ -448,20 +451,61 @@ def load_portal_logs(fpath, load_db=True):
         log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date  
         x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count().\
             sort_values(by=['dt', 'categ', 'line_no'], ascending=False)
-       
-        print (x)
+        # print (x)
 
-    out_path = r'.\out'
+    out_path = r'.\out\log csv'
     if type(fpath) == str:
         out_file_path = os.path.join(out_path, datetime.today().strftime('%Y-%m-%d')+ '_' + os.path.basename(fpath)+  '.csv')
     else:
         base_name= os.path.basename(fpath[0].name)
         out_file_path = os.path.join(out_path, datetime.today().strftime('%Y-%m-%d')+ '_' + base_name+ '.csv')
-    log_df.to_csv(out_file_path)
+    log_df.to_csv(out_file_path, index=False)
    
+def plot_email_quota_error():
+    df = export_email_quota_graph().fillna(0)
+    fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
+            xlabel = 'Date', ylabel = '# of customers', figsize = (10,5)).get_figure()
+    return fig
 
+def plot_failed_logins(filename):
+    df = pd.read_csv(filename, low_memory=False)
+    x = df[['token', 'dt', 'line_no']].loc[df.token.isin(['Logins', 'Failed Logins', 'MailSendException'])].groupby(['dt','token']).count().reset_index()
+    if len(df.dt.unique()) > 1:
+        fig = x.pivot(index='dt', columns='token', values = 'line_no').plot(kind='line').get_figure()
+    else:
+        fig = x.pivot(index='dt', columns='token', values = 'line_no').plot(kind='bar').get_figure()
+    return fig
 
     
+def display_login_cntry(filename):
+    df = pd.read_csv(filename, low_memory=False)
+    cntry = pd.read_csv('.\\data\\cntry.csv', low_memory=False)
+    df.rename (columns={'line_no':'Count'}, inplace = True)
+    
+    df.country.fillna('not logged', inplace=True)
+    dts = df.dt.unique()
+    dts_from = dts[0]
+    dts_to=dts[-1]
+    # x = df.loc[df.token =='Logins', ['country', 'Count']][df.country != 'EG'].dropna().groupby(['country']).count()
+    x = df.loc[df.token =='Logins', ['country', 'Count']].groupby(['country']).count()
+    df = x.join(cntry.set_index('Alpha-2 code'), how = 'left').sort_values(['Count'], ascending = False).reset_index()#.drop(columns='country')
+    return df, dts_from, dts_to
+
+def display_log_summary(filename):
+    df  = pd.read_csv(filename, low_memory=False)
+    # dfx= df[['dt', 'token', 'line_no']][df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False).rename(columns={'line_no':'Count'})
+    dts = df.dt.unique()
+    dts_from = dts[0]
+    dts_to=dts[-1]
+    dfx = df[['dt', 'token', 'line_no']][df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False).rename(columns={'line_no':'Count'}).reset_index()
+    
+    # dfx = dfx.fillna(0).astype(int32)
+    if len(dts) > 1:
+        fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line').get_figure()
+    else:
+        fig = dfx.pivot(index='token', columns='dt', values = 'Count').plot(kind='bar').get_figure()
+    return fig, dts_from, dts_to
+
 if __name__ == "__main__":
     # log_df = log_2_pd()
     # print ('Update Prio ....')
@@ -487,4 +531,4 @@ if __name__ == "__main__":
     fpath = r"C:\Yahia\Python\portal_logs\ServerLogs\26-07-2020\server.log.2020-07-26"
     fpath = r"C:\Yahia\Python\portal_logs\ServerLogs\06-09-2020"
     # export_email_quota_graph()
-    load_portal_logs(fpath, load_db=True)
+    # summerize_portal_logs(fpath, load_db=True)

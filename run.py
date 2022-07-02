@@ -1,5 +1,7 @@
+import sys
 from plogs import log_2_db, resolve_log_files
 from reports import login_IP_stats
+import plogs as logs
 
 
 if __name__ == "__main__":
@@ -14,3 +16,8 @@ if __name__ == "__main__":
     #high_session_customers("16-06-2020")
     #login_IP_stats("26-07-2020")
     # login_IP_stats()
+
+    if len (sys.argv) != 2:
+        print ("Usage: python menu.py <log file or direcotry for log files>")
+    else:
+        logs.summerize_portal_logs(sys.argv[1])

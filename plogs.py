@@ -1,26 +1,29 @@
-from genericpath import isfile
+# from genericpath import isfile
 import json
-from operator import index
+# from operator import index
 import os
-from re import X
+# from re import X
 
-from cv2 import line
+# from cv2 import line
 from numpy import int32
 import DB as db 
-from datetime import datetime, timedelta
+from datetime import datetime#, timedelta
 import pandas as pd
 
+DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data" 
+CSV_OUT_PATH = r'.\out\log csv'
+nid_error_file = r".\out\nid_error.txt"   
 
 # LOG_FILE_DIR = r".\data\ServerLogs"
 # LOG_FILE_DIR = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\06-09-2020"
-LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\Reservation-Server-Log"
-LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
+# LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\Reservation-Server-Log"
+# LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
 # LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log\27-06"
 # LOG_FILE_DIR = r"C:\Users\yahia\Downloads\portal logs"
 # LOG_FILE_DIR = r"C:\Yahia\Python\portal_logs\data\Serverlogs\Reservation-Server-Log"
-LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\files Logs"
+# LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\files Logs"
 
-nid_error_file = r".\out\nid_error.txt"
+
 
 
 def reverse_date(log_date):     #dd-mm-yyyy
@@ -402,16 +405,16 @@ def append_stats(log_df):
 
 
 
-def print_stats(log_df):
+# def print_stats(log_df):
 
-    x = log_df[log_df.categ== 'user']
+#     x = log_df[log_df.categ== 'user']
     
-    x['dt'] = pd.to_datetime(x['log_date']).dt.date  
-    x = x[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
-    x.to_csv('.\\out\\log_stats.csv', index = False)
+#     x['dt'] = pd.to_datetime(x['log_date']).dt.date  
+#     x = x[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
+#     x.to_csv('.\\out\\log_stats.csv', index = False)
    
-    log_df.to_csv('.\\out\\log_df.csv', index = False)
-    print (x)
+#     log_df.to_csv('.\\out\\log_df.csv', index = False)
+#     print (x)
    
 def export_email_quota_graph():
     conn, cursor = db.open_db()
@@ -452,14 +455,15 @@ def summerize_portal_logs(fpath, load_db=True):
         log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date  
         x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count().\
             sort_values(by=['dt', 'categ', 'line_no'], ascending=False)
+        print ('Loading done ...')
         # print (x)
 
-    out_path = r'.\out\log csv'
+
     if type(fpath) == str:
-        out_file_path = os.path.join(out_path, datetime.today().strftime('%Y-%m-%d')+ '_' + os.path.basename(fpath)+  '.csv')
+        out_file_path = os.path.join(CSV_OUT_PATH, datetime.today().strftime('%Y-%m-%d')+ '_' + os.path.basename(fpath)+  '.csv')
     else:
         base_name= os.path.basename(fpath[0].name)
-        out_file_path = os.path.join(out_path, datetime.today().strftime('%Y-%m-%d')+ '_' + base_name+ '.csv')
+        out_file_path = os.path.join(CSV_OUT_PATH, datetime.today().strftime('%Y-%m-%d')+ '_' + base_name+ '.csv')
     log_df.to_csv(out_file_path, index=False)
    
 def plot_email_quota_error():
@@ -477,10 +481,10 @@ def plot_failed_logins(filename):
         fig = x.pivot(index='dt', columns='token', values = 'line_no').plot(kind='bar').get_figure()
     return fig
 
-    
+
 def display_login_cntry(filename):
     df = pd.read_csv(filename, low_memory=False)
-    cntry = pd.read_csv('.\\data\\cntry.csv', low_memory=False)
+    cntry = pd.read_csv(os.path.join(DATA_FOLDER, 'cntry.csv'), low_memory=False)
     df.rename (columns={'line_no':'Count'}, inplace = True)
     
     df.country.fillna('not logged', inplace=True)

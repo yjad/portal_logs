@@ -489,6 +489,7 @@ def display_login_cntry(filename):
     
     df.country.fillna('not logged', inplace=True)
     dts = df.dt.unique()
+    dts.sort()
     dts_from = dts[0]
     dts_to=dts[-1]
     # x = df.loc[df.token =='Logins', ['country', 'Count']][df.country != 'EG'].dropna().groupby(['country']).count()
@@ -500,6 +501,7 @@ def display_log_summary(filename):
     df  = pd.read_csv(filename, low_memory=False)
     # dfx= df[['dt', 'token', 'line_no']][df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False).rename(columns={'line_no':'Count'})
     dts = df.dt.unique()
+    dts.sort()
     dts_from = dts[0]
     dts_to=dts[-1]
     dfx = df[['dt', 'token', 'line_no']][df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False).rename(columns={'line_no':'Count'}).reset_index()

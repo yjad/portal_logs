@@ -13,19 +13,19 @@ import pandas as pd
 
 # LOG_FILE_DIR = r".\data\ServerLogs"
 # LOG_FILE_DIR = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\06-09-2020"
-LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\Reservation-Server-Log"
-LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
+# LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\Reservation-Server-Log"
+# LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log"
 # LOG_FILE_DIR = r"C:\Users\yahia\Downloads\Reservation-Server-Log\27-06"
 # LOG_FILE_DIR = r"C:\Users\yahia\Downloads\portal logs"
 # LOG_FILE_DIR = r"C:\Yahia\Python\portal_logs\data\Serverlogs\Reservation-Server-Log"
-LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\files Logs"
-
+# LOG_FILE_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\files Logs"
+CSV_OUT_PATH = r'.\data\log csv'
 nid_error_file = r".\out\nid_error.txt"
 
 
-def reverse_date(log_date):     #dd-mm-yyyy
-    log_date_r = log_date[-4:] + "-" + log_date[3:5] + "-" + log_date[0:2]
-    return  log_date_r
+# def reverse_date(log_date):     #dd-mm-yyyy
+#     log_date_r = log_date[-4:] + "-" + log_date[3:5] + "-" + log_date[0:2]
+#     return  log_date_r
 
 
 def resolve_log_files(file_path):
@@ -346,14 +346,18 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp):
 def parse_tech_rec(txt, line_no, out_error, search_tokens, dt):
     
     # search error text for tokens
-    error_categ = "Undefined"
+    # error_categ = "Undefined"
     # print (search_tokens)
     # token_found = False
     for token in search_tokens.itertuples():
-        if txt.find(token[1]) != -1:
-            # print (token, "------->", token[1]) 
-            error_token = token[1]
-            error_categ = token[2]
+        if txt.find(token.token) != -1:
+            # print (token, "------->", token) 
+            # error_token = token.token
+            if token.desc:
+                error_token = token.desc
+            else:
+                error_token = token.token
+            error_categ = token.categ
             txt = None
             break    
 
@@ -369,25 +373,25 @@ def parse_tech_rec(txt, line_no, out_error, search_tokens, dt):
     return rec_lst
 
 
-def update_prio(log_df):
+# def update_prio(log_df):
 
-    print (log_df.columns)
+#     print (log_df.columns)
 
-    x = log_df[['token', 'line_no']].fillna('x').\
-            groupby(['token'],as_index = False).count().sort_values(by='line_no', ascending=False)
+#     x = log_df[['token', 'line_no']].fillna('x').\
+#             groupby(['token'],as_index = False).count().sort_values(by='line_no', ascending=False)
     
-    x.to_csv('.\\out\\token prio.csv', index = False)
-    conn, cursor = db.open_db()
-    db.exec_cmd(cursor, "UPDATE error_token set prio = 99")
-    i = 0
-    for r in x.iterrows():
-        cmd = f'UPDATE error_token set prio = {i} WHERE token = "{r[1][0]}"'
-        # print (cmd)
-        db.exec_cmd(cursor, cmd)
-        i = i + 1
+#     x.to_csv('.\\out\\token prio.csv', index = False)
+#     conn, cursor = db.open_db()
+#     db.exec_cmd(cursor, "UPDATE error_token set prio = 99")
+#     i = 0
+#     for r in x.iterrows():
+#         cmd = f'UPDATE error_token set prio = {i} WHERE token = "{r[1][0]}"'
+#         # print (cmd)
+#         db.exec_cmd(cursor, cmd)
+#         i = i + 1
 
-    conn.commit()
-    db.close_db(cursor)
+#     conn.commit()
+#     db.close_db(cursor)
 
 
 def append_stats(log_df):
@@ -402,35 +406,35 @@ def append_stats(log_df):
 
 
 
-def print_stats(log_df):
+# def print_stats(log_df):
 
-    x = log_df[log_df.categ== 'user']
+#     x = log_df[log_df.categ== 'user']
     
-    x['dt'] = pd.to_datetime(x['log_date']).dt.date  
-    x = x[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
-    x.to_csv('.\\out\\log_stats.csv', index = False)
+#     x['dt'] = pd.to_datetime(x['log_date']).dt.date  
+#     x = x[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
+#     x.to_csv('.\\out\\log_stats.csv', index = False)
    
-    log_df.to_csv('.\\out\\log_df.csv', index = False)
-    print (x)
+#     log_df.to_csv('.\\out\\log_df.csv', index = False)
+#     print (x)
    
-def export_email_quota_graph():
-    conn, cursor = db.open_db()
-    cmd = """
-select * from 
-(select dt, sum(line_no) '# logins' from log_stats where token = 'Logins' group by dt)
-left join
-(select dt, sum(line_no) '# email quota errors' from log_stats where token = 'MailSendException' group by dt)
-using (dt)
-"""
-    df = pd.read_sql(cmd, conn)
-    cursor.close()
+# def export_email_quota_graph():
+#     conn, cursor = db.open_db()
+#     cmd = """
+# select * from 
+# (select dt, sum(line_no) '# logins' from log_stats where token = 'Logins' group by dt)
+# left join
+# (select dt, sum(line_no) '# email quota errors' from log_stats where token = 'MailSendException' group by dt)
+# using (dt)
+# """
+#     df = pd.read_sql(cmd, conn)
+#     cursor.close()
 
-    fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
-            xlabel = 'Date', ylabel = '# of customers', figsize = (7,5)).get_figure()
+#     fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
+#             xlabel = 'Date', ylabel = '# of customers', figsize = (7,5)).get_figure()
 
-    # fig.show()
-    fig.savefig(r'.\out\email quota.jpg')
-    return df
+#     # fig.show()
+#     fig.savefig(r'.\out\email quota.jpg')
+#     return df
 
 # summerize log file(s). Load logins summary into DB and save summary csv file with  
 def summerize_portal_logs(fpath, load_db=True):
@@ -454,12 +458,12 @@ def summerize_portal_logs(fpath, load_db=True):
             sort_values(by=['dt', 'categ', 'line_no'], ascending=False)
         # print (x)
 
-    out_path = r'.\out\log csv'
+    
     if type(fpath) == str:
-        out_file_path = os.path.join(out_path, datetime.today().strftime('%Y-%m-%d')+ '_' + os.path.basename(fpath)+  '.csv')
+        out_file_path = os.path.join(CSV_OUT_PATH, datetime.today().strftime('%Y-%m-%d')+ '_' + os.path.basename(fpath)+  '.csv')
     else:
         base_name= os.path.basename(fpath[0].name)
-        out_file_path = os.path.join(out_path, datetime.today().strftime('%Y-%m-%d')+ '_' + base_name+ '.csv')
+        out_file_path = os.path.join(CSV_OUT_PATH, datetime.today().strftime('%Y-%m-%d')+ '_' + base_name+ '.csv')
     log_df.to_csv(out_file_path, index=False)
    
 def plot_email_quota_error():
@@ -502,7 +506,7 @@ def display_log_summary(filename):
     
     # dfx = dfx.fillna(0).astype(int32)
     if len(dts) > 1:
-        fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line').get_figure()
+        fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line', figsize=(10,6)).get_figure()
     else:
         fig = dfx.pivot(index='token', columns='dt', values = 'Count').plot(kind='bar').get_figure()
     return fig, dts_from, dts_to

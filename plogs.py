@@ -402,19 +402,7 @@ def append_stats(log_df):
     x.to_sql('log_stats', conn, if_exists = 'append')
 
     db.close_db(cursor)
-
-
-
-# def print_stats(log_df):
-
-#     x = log_df[log_df.categ== 'user']
     
-#     x['dt'] = pd.to_datetime(x['log_date']).dt.date  
-#     x = x[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count()
-#     x.to_csv('.\\out\\log_stats.csv', index = False)
-   
-#     log_df.to_csv('.\\out\\log_df.csv', index = False)
-#     print (x)
    
 def export_email_quota_graph():
     conn, cursor = db.open_db()

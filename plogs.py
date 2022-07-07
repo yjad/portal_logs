@@ -11,7 +11,7 @@ from datetime import datetime#, timedelta
 import pandas as pd
 
 DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data" 
-CSV_OUT_PATH = r'.\out\log csv'
+CSV_PATH = r'.\data\log csv'
 nid_error_file = r".\out\nid_error.txt"   
 
 # LOG_FILE_DIR = r".\data\ServerLogs"
@@ -28,7 +28,7 @@ nid_error_file = r".\out\nid_error.txt"
 #     log_date_r = log_date[-4:] + "-" + log_date[3:5] + "-" + log_date[0:2]
 #     return  log_date_r
 
-
+All_df = pd.DataFrame()
 def resolve_log_files(file_path):
     log_files = []
 
@@ -280,7 +280,7 @@ def log_2_df(file_path):
                 out_error.write('***Invalid record format***, '+ str(line_no) + ", ERROR," + str(txt))
                 continue    # Invalid record format, ignore rest of parsing
             rec = None
-            if log_type == 'ERROR' and txt.find('"nid"') != -1:
+            if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
                 rec = parse_nid_rec(txt, line_no, out_error, dt)
                 # pass
             else:
@@ -311,12 +311,6 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp):
             ipa = ip.split(",")
             if len(ip) > 0:
                 ip = ipa[0]
-        # if res['success']:
-        #     token = 'Login Success' if service == 'login' else 'Logout Success'
-        # elif not res['success']: 
-        #     token = 'Login Failed' if service == 'login' else 'Logout Failed'
-        # else:
-        #     token = service
         x = service + " " + str(res['success'])
         match x:
             case 'login True':  token = 'Logins'
@@ -346,18 +340,14 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp):
 
 def parse_tech_rec(txt, line_no, out_error, search_tokens, dt):
     
-    # search error text for tokens
-    # error_categ = "Undefined"
-    # print (search_tokens)
-    # token_found = False
     for token in search_tokens.itertuples():
-        if txt.find(token.token) != -1:
+        if txt.find(token.token) != -1: # found
             # print (token, "------->", token) 
             # error_token = token.token
-            if token.desc:
-                error_token = token.desc
-            else:
+            if pd.isnull(token.desc):
                 error_token = token.token
+            else:
+                error_token = token.desc
             error_categ = token.categ
             txt = None
             break    
@@ -406,24 +396,24 @@ def append_stats(log_df):
     db.close_db(cursor)
     
    
-# def export_email_quota_graph():
-#     conn, cursor = db.open_db()
-#     cmd = """
-# select * from 
-# (select dt, sum(line_no) '# logins' from log_stats where token = 'Logins' group by dt)
-# left join
-# (select dt, sum(line_no) '# email quota errors' from log_stats where token = 'MailSendException' group by dt)
-# using (dt)
-# """
-#     df = pd.read_sql(cmd, conn)
-#     cursor.close()
+def export_email_quota_graph():
+    conn, cursor = db.open_db()
+    cmd = """
+select * from 
+(select dt, sum(line_no) '# logins' from log_stats where token = 'Logins' group by dt)
+left join
+(select dt, sum(line_no) '# email quota errors' from log_stats where token = 'MailSendException' group by dt)
+using (dt)
+"""
+    df = pd.read_sql(cmd, conn)
+    cursor.close()
 
-#     fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
-#             xlabel = 'Date', ylabel = '# of customers', figsize = (7,5)).get_figure()
+    fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
+            xlabel = 'Date', ylabel = '# of customers', figsize = (7,5)).get_figure()
 
-#     # fig.show()
-#     fig.savefig(r'.\out\email quota.jpg')
-#     return df
+    # fig.show()
+    fig.savefig(r'.\out\email quota.jpg')
+    return df
 
 # summerize log file(s). Load logins summary into DB and save summary csv file with  
 def summerize_portal_logs(fpath, load_db=True):
@@ -448,11 +438,13 @@ def summerize_portal_logs(fpath, load_db=True):
         print ('Loading done ...')
         # print (x)
 
-    if type(fpath) == str:
-        out_file_path = os.path.join(CSV_OUT_PATH, datetime.today().strftime('%Y-%m-%d')+ '_' + os.path.basename(fpath)+  '.csv')
-    else:
-        base_name= os.path.basename(fpath[0].name)
-        out_file_path = os.path.join(CSV_OUT_PATH, datetime.today().strftime('%Y-%m-%d')+ '_' + base_name+ '.csv')
+    dts = sorted(log_df.dt.unique())
+    out_file_path = os.path.join(CSV_PATH, f"log summary-{dts[0]}-to-{dts[-1]}.csv")
+    # if type(fpath) == str:
+    #     out_file_path = os.path.join(CSV_PATH, datetime.today().strftime('%Y-%m-%d')+ '_' + os.path.basename(fpath)+  '.csv')
+    # else:
+    #     base_name= os.path.basename(fpath[0].name)
+    #     out_file_path = os.path.join(CSV_PATH, datetime.today().strftime('%Y-%m-%d')+ '_' + base_name+ '.csv')
     log_df.to_csv(out_file_path, index=False)
    
 def plot_email_quota_error():
@@ -471,11 +463,14 @@ def plot_failed_logins(filename):
     return fig
 
 
-def display_login_cntry(filename):
-    df = pd.read_csv(filename, low_memory=False)
+def display_login_cntry():
+    global All_df
+    # df = pd.read_csv(filename, low_memory=False)
     cntry = pd.read_csv(os.path.join(DATA_FOLDER, 'cntry.csv'), low_memory=False)
-    df.rename (columns={'line_no':'Count'}, inplace = True)
     
+    
+    df = All_df.copy()
+    df.rename (columns={'line_no':'Count'}, inplace = True)
     df.country.fillna('not logged', inplace=True)
     dts = df.dt.unique()
     dts.sort()
@@ -486,21 +481,32 @@ def display_login_cntry(filename):
     df = x.join(cntry.set_index('Alpha-2 code'), how = 'left').sort_values(['Count'], ascending = False).reset_index()#.drop(columns='country')
     return df, dts_from, dts_to
 
-def display_log_summary(filename):
-    df  = pd.read_csv(filename, low_memory=False)
-    # dfx= df[['dt', 'token', 'line_no']][df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False).rename(columns={'line_no':'Count'})
-    dts = df.dt.unique()
+def combine_log_csv(filenames):
+    global All_df
+    # df = pd.DataFrame()
+    All_df = pd.DataFrame() # reset
+    for f in filenames:
+        # print ('*********:', f)
+        df_1  = pd.read_csv(f, low_memory=False)
+        All_df = pd.concat([All_df, df_1])
+    # return df
+
+
+def display_log_summary():
+    global All_df
+    print ("----------", All_df.columns)
+    dfx = All_df[['dt', 'token', 'line_no']][All_df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False)
+    dfx = dfx.rename(columns={'line_no':'Count'}).reset_index()
+    dts = All_df.dt.unique()
     dts.sort()
     dts_from = dts[0]
     dts_to=dts[-1]
-    dfx = df[['dt', 'token', 'line_no']][df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False).rename(columns={'line_no':'Count'}).reset_index()
-    
-    # dfx = dfx.fillna(0).astype(int32)
-    if len(dts) > 1:
-        fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line', figsize=(10,6)).get_figure()
-    else:
+    if dts_from == dts_to:      # single day
         fig = dfx.pivot(index='token', columns='dt', values = 'Count').plot(kind='bar').get_figure()
+    else:   # multy day graph
+        fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line', figsize=(10,6)).get_figure()
     return fig, dts_from, dts_to
+
 
 if __name__ == "__main__":
     # log_df = log_2_pd()

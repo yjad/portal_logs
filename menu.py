@@ -1,6 +1,6 @@
 # from base64 import decode
 # from numpy import true_divide
-from distutils.util import strtobool
+# from distutils.util import strtobool
 import pandas as pd
 import streamlit as st
 from streamlit_option_menu import option_menu
@@ -98,10 +98,13 @@ match selected:
         if st.button('Process ...'):
             with st.spinner("Please Wait ... "):
                 # df=  upload_csv_files(uploaded_csv_file)
-                fig, strt, end = logs.display_log_summary()
+                dts = logs.get_log_dates()
+                selected_dts = st.sidebar.multiselect('Dates', dts, dts)
+                fig, strt, end = logs.display_log_summary(selected_dts)
             txt = f'#### Log Summary during {strt} to {end}'
             st.markdown (txt)
             st.pyplot(fig)
+           
 
     # case 'Load log summary csv':
     #     uploaded_csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = False)

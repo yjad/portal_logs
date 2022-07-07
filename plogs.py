@@ -489,12 +489,17 @@ def combine_log_csv(filenames):
         # print ('*********:', f)
         df_1  = pd.read_csv(f, low_memory=False)
         All_df = pd.concat([All_df, df_1])
+  
+    All_df.drop_duplicates(subset=['dt','line_no'], inplace=True)
     # return df
 
-
-def display_log_summary():
+def get_log_dates():
     global All_df
-    print ("----------", All_df.columns)
+    return sorted( All_df.dt.unique() )
+
+def display_log_summary(selected_dts):
+    global All_df
+    
     dfx = All_df[['dt', 'token', 'line_no']][All_df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False)
     dfx = dfx.rename(columns={'line_no':'Count'}).reset_index()
     dts = All_df.dt.unique()
@@ -503,7 +508,8 @@ def display_log_summary():
     dts_to=dts[-1]
     if dts_from == dts_to:      # single day
         fig = dfx.pivot(index='token', columns='dt', values = 'Count').plot(kind='bar').get_figure()
-    else:   # multy day graph
+    else:   # multi day graph
+        # print ('****', dfx.columns)
         fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line', figsize=(10,6)).get_figure()
     return fig, dts_from, dts_to
 

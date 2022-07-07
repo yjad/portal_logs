@@ -500,7 +500,8 @@ def get_log_dates():
 def display_log_summary(selected_dts):
     global All_df
     
-    dfx = All_df[['dt', 'token', 'line_no']][All_df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False)
+    dfx = All_df[ (All_df['dt'].isin(selected_dts)) ]
+    dfx = dfx[['dt', 'token', 'line_no']][dfx.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False)
     dfx = dfx.rename(columns={'line_no':'Count'}).reset_index()
     dts = All_df.dt.unique()
     dts.sort()

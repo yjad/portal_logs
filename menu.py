@@ -100,6 +100,7 @@ match selected:
                 # df=  upload_csv_files(uploaded_csv_file)
                 dts = logs.get_log_dates()
                 selected_dts = st.sidebar.multiselect('Dates', dts, dts)
+                st.write(selected_dts)
                 fig, strt, end = logs.display_log_summary(selected_dts)
             txt = f'#### Log Summary during {strt} to {end}'
             st.markdown (txt)

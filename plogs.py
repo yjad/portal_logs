@@ -13,6 +13,8 @@ import pandas as pd
 DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data" 
 CSV_PATH = r'.\data\log csv'
 nid_error_file = r".\out\nid_error.txt"   
+All_df = pd.DataFrame()
+Cntty = pd.DataFrame
 
 # LOG_FILE_DIR = r".\data\ServerLogs"
 # LOG_FILE_DIR = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\06-09-2020"
@@ -28,7 +30,7 @@ nid_error_file = r".\out\nid_error.txt"
 #     log_date_r = log_date[-4:] + "-" + log_date[3:5] + "-" + log_date[0:2]
 #     return  log_date_r
 
-All_df = pd.DataFrame()
+
 def resolve_log_files(file_path):
     log_files = []
 
@@ -463,50 +465,109 @@ def plot_failed_logins(filename):
     return fig
 
 
-def display_login_cntry():
-    global All_df
-    # df = pd.read_csv(filename, low_memory=False)
-    cntry = pd.read_csv(os.path.join(DATA_FOLDER, 'cntry.csv'), low_memory=False)
-    
+def display_login_cntry(selected_dts):
+    global All_df, Cntry
     
     df = All_df.copy()
+    if selected_dts:
+        df = df[df.dt.isin(selected_dts)]
     df.rename (columns={'line_no':'Count'}, inplace = True)
     df.country.fillna('not logged', inplace=True)
-    dts = df.dt.unique()
-    dts.sort()
-    dts_from = dts[0]
-    dts_to=dts[-1]
-    # x = df.loc[df.token =='Logins', ['country', 'Count']][df.country != 'EG'].dropna().groupby(['country']).count()
-    x = df.loc[df.token =='Logins', ['country', 'Count']].groupby(['country']).count()
-    df = x.join(cntry.set_index('Alpha-2 code'), how = 'left').sort_values(['Count'], ascending = False).reset_index()#.drop(columns='country')
-    return df, dts_from, dts_to
+    # dts_from, dts_to, _ = get_df_dates()
+
+    df = df.loc[df.token =='Logins', ['dt', 'country', 'Count']].set_index('country')
+    df = df.join(Cntry.set_index('Alpha-2 code'), how = 'left').sort_values(['Count'], ascending = False).reset_index()#.drop(columns='country')
+    # print (df.columns)
+    # df = df.reset_index().groupby(['dt','Country']).count()
+    if len (df) > 0:
+        df_pivot = pd.pivot_table(df, index = 'Country', columns='dt', values = 'Count', aggfunc='count', margins=True, fill_value=0)
+        df_pivot.sort_values(df_pivot.columns[-1], inplace= True, ascending=False)   # sort by totals columns
+        dts_from, dts_to, dts = get_df_dates(df)
+        return df_pivot, dts_from, dts_to
+    else:
+        return None, None, None
+
 
 def combine_log_csv(filenames):
-    global All_df
+    global All_df, Cntry
     # df = pd.DataFrame()
+    Cntry = pd.read_csv(os.path.join(DATA_FOLDER, 'cntry.csv'), low_memory=False)   # load it once
     All_df = pd.DataFrame() # reset
     for f in filenames:
-        # print ('*********:', f)
         df_1  = pd.read_csv(f, low_memory=False)
         All_df = pd.concat([All_df, df_1])
-    # return df
+
+    All_df.drop_duplicates(subset = ['dt', 'line_no'], inplace=True)
+    dts_from, dts_to, dts = get_df_dates()
+    return dts_from, dts_to, dts
 
 
-def display_log_summary():
+def plot_log_summary(selected_dts, selected_tokens):
     global All_df
-    print ("----------", All_df.columns)
-    dfx = All_df[['dt', 'token', 'line_no']][All_df.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False)
+    if selected_dts == None:
+        dfx = All_df.copy()
+    else:
+        dfx = All_df[All_df.dt.isin(selected_dts)]
+
+    if selected_tokens:
+        dfx = dfx[dfx.token.isin(selected_tokens)]
+
+    dts_from = selected_dts[0] if selected_dts else None
+    dts_to = selected_dts[-1] if selected_dts else None
+
+    if len(dfx) == 0:
+        return None, dts_from, dts_to
+
+    dfx = dfx[['dt', 'token', 'line_no']][dfx.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False)
     dfx = dfx.rename(columns={'line_no':'Count'}).reset_index()
+    
+    if dts_from == dts_to:      # single day
+        fig = dfx.pivot(index='token', columns='dt', values = 'Count').plot(kind='bar').get_figure()
+    else:   # multi day graph
+        fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line', figsize=(10,6)).get_figure()
+    return fig, dts_from, dts_to
+
+def get_df_data(selected_dts, selected_tokens):
+    global All_df
+
+
+    df = All_df.copy()
+    if selected_dts:
+        df = df[df.dt.isin(selected_dts) & df.token.isin(selected_tokens)]
+
+    if len (df) > 0:
+        df_pivot = pd.pivot_table(df, index = 'token', columns='dt', values = 'line_no', aggfunc='count', margins=True, fill_value=0)
+        dts_from, dts_to, dts = get_df_dates(df)
+        return df_pivot, dts_from, dts_to, dts    
+    else:
+        return None, None, None, None
+
+def summary_loaded():
+    global All_df
+    if len(All_df) > 0:
+        return True
+    else:
+        return False
+
+def get_df_dates(df=None):
+    global All_df
+
+    if not summary_loaded():
+        return None
+    
     dts = All_df.dt.unique()
     dts.sort()
     dts_from = dts[0]
     dts_to=dts[-1]
-    if dts_from == dts_to:      # single day
-        fig = dfx.pivot(index='token', columns='dt', values = 'Count').plot(kind='bar').get_figure()
-    else:   # multy day graph
-        fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line', figsize=(10,6)).get_figure()
-    return fig, dts_from, dts_to
+    return dts_from, dts_to, dts
+    
+def get_tokens():
+    global All_df
 
+    if not summary_loaded():
+        return None
+    else:
+        return All_df.token.unique()
 
 if __name__ == "__main__":
     # log_df = log_2_pd()

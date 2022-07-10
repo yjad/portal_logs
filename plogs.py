@@ -1,7 +1,7 @@
 import json
 import os
 
-from numpy import int32
+# from numpy import int32
 import DB as db 
 from datetime import datetime#, timedelta
 import pandas as pd

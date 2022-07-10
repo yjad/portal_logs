@@ -5,12 +5,13 @@ import os
 import DB as db 
 from datetime import datetime#, timedelta
 import pandas as pd
+import country_codes
 
 DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data" 
 CSV_PATH = r'.\data\log csv'
 nid_error_file = r".\out\nid_error.txt"   
 All_df = pd.DataFrame()
-Cntry = pd.DataFrame
+Cntry = country_codes.Cntry
 
 # LOG_FILE_DIR = r".\data\ServerLogs"
 # LOG_FILE_DIR = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\06-09-2020"

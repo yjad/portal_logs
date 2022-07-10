@@ -1,10 +1,6 @@
-# from genericpath import isfile
 import json
-# from operator import index
 import os
-# from re import X
 
-# from cv2 import line
 from numpy import int32
 import DB as db 
 from datetime import datetime#, timedelta
@@ -14,7 +10,7 @@ DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-d
 CSV_PATH = r'.\data\log csv'
 nid_error_file = r".\out\nid_error.txt"   
 All_df = pd.DataFrame()
-Cntty = pd.DataFrame
+Cntry = pd.DataFrame
 
 # LOG_FILE_DIR = r".\data\ServerLogs"
 # LOG_FILE_DIR = r"C:\Yahia\Home\Yahia-Dev\Python\PortalLogs-\ServerLogs\06-09-2020"
@@ -228,6 +224,7 @@ def log_2_db_error(log_date=None):
     out_error.close()
     db.close_db(cursor)
 
+
 def log_2_df(file_path):
 
     # conn, cursor = db.open_db()
@@ -298,7 +295,6 @@ def log_2_df(file_path):
     return log_pd
 
 
-
 def parse_nid_rec(txt, line_no, out_error, log_timestamp):
 
     p = txt.find ("{")
@@ -339,6 +335,7 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp):
     error_categ = 'user'
     rec_lst = [log_timestamp, None, line_no, nid, log_type, cntry, ip, service, token, error_categ, None]
     return rec_lst
+
 
 def parse_tech_rec(txt, line_no, out_error, search_tokens, dt):
     
@@ -449,11 +446,13 @@ def summerize_portal_logs(fpath, load_db=True):
     #     out_file_path = os.path.join(CSV_PATH, datetime.today().strftime('%Y-%m-%d')+ '_' + base_name+ '.csv')
     log_df.to_csv(out_file_path, index=False)
    
+
 def plot_email_quota_error():
     df = export_email_quota_graph().fillna(0)
     fig = df.plot(x='dt', y=['# logins', '# email quota errors'], title = 'Reservation Portal Logins vs email quota error', grid=True,
             xlabel = 'Date', ylabel = '# of customers', figsize = (10,5)).get_figure()
     return fig
+
 
 def plot_failed_logins(filename):
     df = pd.read_csv(filename, low_memory=False)
@@ -527,9 +526,9 @@ def plot_log_summary(selected_dts, selected_tokens):
         fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line', figsize=(10,6)).get_figure()
     return fig, dts_from, dts_to
 
+
 def get_df_data(selected_dts, selected_tokens):
     global All_df
-
 
     df = All_df.copy()
     if selected_dts:
@@ -542,12 +541,14 @@ def get_df_data(selected_dts, selected_tokens):
     else:
         return None, None, None, None
 
+
 def summary_loaded():
     global All_df
     if len(All_df) > 0:
         return True
     else:
         return False
+
 
 def get_df_dates(df=None):
     global All_df
@@ -561,13 +562,17 @@ def get_df_dates(df=None):
     dts_to=dts[-1]
     return dts_from, dts_to, dts
     
-def get_tokens():
+
+def get_tokens(categ=None):
     global All_df
 
     if not summary_loaded():
         return None
     else:
-        return All_df.token.unique()
+        if categ == None:
+            return All_df.token.unique()
+        else:   # user categ only 
+            return All_df[All_df.categ == categ].token.unique()
 
 if __name__ == "__main__":
     # log_df = log_2_pd()

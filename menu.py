@@ -104,7 +104,7 @@ match selected:
             dt_from, dt_to, dts = logs.get_df_dates()
             selected_dates = st.multiselect('Dates', dts, dts)
 
-            tokens = logs.get_tokens()
+            tokens = logs.get_tokens(categ= None)
             selected_tokens = st.multiselect('Error Tokens', tokens, tokens)
 
             with st.spinner("Please Wait ... "):
@@ -129,7 +129,7 @@ match selected:
             dt_from, dt_to, dts = logs.get_df_dates()
             selected_dates = st.multiselect('Dates', dts, dts)
 
-            tokens = logs.get_tokens()
+            tokens = logs.get_tokens(categ = 'user')
             selected_categs = st.multiselect('Error Tokens', tokens, tokens)
             with st.spinner("Please Wait ... "):
                 # df=  upload_csv_files(uploaded_csv_file)
@@ -142,8 +142,6 @@ match selected:
             else:
                 st.info ("No data to plot")
                         
-
-
 
 def x():
     df = logs.export_email_quota_graph().fillna(0)

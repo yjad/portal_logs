@@ -258,7 +258,7 @@ def log_2_df(file_path):
             print (log_file)
         else:
             f= log_file
-            print (log_file.name)
+            print (log_file)
         
         line_no = 0
         while True:

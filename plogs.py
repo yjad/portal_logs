@@ -491,7 +491,7 @@ def display_login_cntry(selected_dts):
 def combine_log_csv(filenames):
     global All_df, Cntry
     # df = pd.DataFrame()
-    Cntry = pd.read_csv(os.path.join(DATA_FOLDER, 'cntry.csv'), low_memory=False)   # load it once
+    # Cntry = pd.read_csv(os.path.join(DATA_FOLDER, 'cntry.csv'), low_memory=False)   # load it once
     All_df = pd.DataFrame() # reset
     for f in filenames:
         df_1  = pd.read_csv(f, low_memory=False)

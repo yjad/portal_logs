@@ -1,5 +1,5 @@
 import pandas as pd
-Cntry = pd.DataFrame(columns= ["Country Alpha-2", 'code'], data = [
+Cntry = pd.DataFrame(columns= ["Alpha-2", 'code'], data = [
 ['Afghanistan','AF'],
 ['Åland Islands','AX'],
 ['Albania','AL'],

@@ -17,9 +17,27 @@ st.title('Reservation Portal Logs - followup')
     
 #     return st.pyplot(fig)
 
-# @st.cache
-# def upload_csv_files(files):
-#     return logs.combine_log_csv(files)
+# @st.cache(suppress_st_warning=True)
+@st.experimental_memo(suppress_st_warning=True)
+def upload_csv_files(csv_files):
+    if not csv_files:
+        st.warning('No csv files loaded, load files first ...') 
+        return None, None, None, None
+    else:
+        with st.spinner("Please Wait ... "):
+            All_df = pd.DataFrame() # reset
+            for f in csv_files:
+                df_1  = pd.read_csv(f, low_memory=False)
+                All_df = pd.concat([All_df, df_1])
+            All_df.drop_duplicates(subset = ['dt', 'line_no'], inplace=True)
+            dts = sorted(All_df.dt.unique())
+            strt = dts[0]
+            end =dts[-1]
+        txt = f'#### Data Loaded for the duration from {strt} to {end}'
+        st.success(txt)
+        return All_df, strt, end, dts
+        
+        
 
 def convert_df (df):
     return df.to_csv().encode('utf-8')
@@ -28,14 +46,14 @@ with st.sidebar:
     selected = option_menu('Main Menu',
     ["Home", 'Log to csv', 
             'Big Log>200MB to csv', 
-            'Load log summary',
+            # 'Load log summary',
             # 'Email Quota grpah',
             # 'Failed Logins', 
             'Login countries',
             'Show summary data',
             'Plot log summary',
             'Settings'], 
-        icons=['house', '', '', '', '', '','', 'gear'], menu_icon="cast", default_index=0)      #, default_index=1
+        icons=['house', '', '', '', '','', 'gear'], menu_icon="cast", default_index=0)      #, default_index=1
     # selected
 
 match selected:
@@ -55,19 +73,20 @@ match selected:
             
             st.success("File extraced ...")
 
-    case 'Load log summary':
-        uploaded_csv_file= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
-        # print (uploaded_csv_file)
-        # if st.button('Process ...'):
-        if not uploaded_csv_file:
-            st.warning('No csv files loaded, load files first ...') 
-        else:
-            with st.spinner("Please Wait ... "):
-                strt, end, _ = logs.combine_log_csv(uploaded_csv_file)
+    # case 'Load log summary':
+    #     csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
+    #     # print (uploaded_csv_file)
+    #     # if st.button('Process ...'):
+    #     if not csv_files:
+    #         st.warning('No csv files loaded, load files first ...') 
+    #     else:
+    #         with st.spinner("Please Wait ... "):
+    #             # strt, end, _ = logs.combine_log_csv(uploaded_csv_file)
+    #             strt, end, _ = upload_csv_files(csv_files)
             
-            txt = f'#### Data Loaded for the duration from {strt} to {end}'
-            st.success(txt)
-            # st.markdown (txt)
+    #         txt = f'#### Data Loaded for the duration from {strt} to {end}'
+    #         st.success(txt)
+    #         # st.markdown (txt)
 
     case 'Email Quota grpah':
         fig = logs.plot_email_quota_error()
@@ -81,67 +100,72 @@ match selected:
     #         st.pyplot(fig)
 
     case 'Login countries':
-        if not logs.summary_loaded():
-            st.warning('No csv files loaded, load files first ...') 
-        else:
-            dt_from, dt_to, dts = logs.get_df_dates()
+        csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
+        df, strt, end, dts = upload_csv_files(csv_files)
+        if strt: # files selected
             selected_dates = st.multiselect('Dates', dts, dts)
             
             with st.spinner("Please Wait ... "):
-                df, strt, end = logs.display_login_cntry(selected_dates)
-            txt = f'#### Login by countries during {strt} to {end}'
+                df = logs.display_login_cntry(df, selected_dates)
+            if not selected_dates:
+                txt = (f'#### Log data during {strt} to {end}')
+            else:
+                txt = f'#### Login by countries during {selected_dates[0]} to {selected_dates[-1]}'
             st.markdown (txt)
             if not df.empty:
                 st.dataframe(df)
                 st.download_button(label = 'Save to csv', data = convert_df(df), file_name = 'Login By Country.csv', mime = 'text/csv')
             else:
                 st.info('#### No data to display')
+        # else:
+        #     st.info('#### No data to display')
 
     case 'Show summary data':
-        if not logs.summary_loaded():
-            st.warning('No csv files loaded, load files first ...') 
+        csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
+        df, dt_from, dt_to, dts =upload_csv_files(csv_files)
+        
+        if not dt_from: 
+            st.info('#### No data to display')
         else:
-            dt_from, dt_to, dts = logs.get_df_dates()
             selected_dates = st.multiselect('Dates', dts, dts)
-
-            tokens = logs.get_tokens(categ= None)
+            tokens = df.token.unique()
+            # return All_df[All_df.categ == categ].token.unique()
             selected_tokens = st.multiselect('Error Tokens', tokens, tokens)
-
             with st.spinner("Please Wait ... "):
-                # df=  upload_csv_files(uploaded_csv_file)
-                df, dt_from, dt_to, _ = logs.get_df_data(selected_dates, selected_tokens)
-           
-            if len(df) > 0:
+                df = logs.get_df_data(df, selected_dates, selected_tokens)
+            if not selected_dates:
                 st.markdown (f'#### Log data during {dt_from} to {dt_to}')
-                st.dataframe(df)
-                st.download_button(label = 'Save to csv', data = convert_df(df), file_name = 'Log Summary Data.csv', mime = 'text/csv')
             else:
-                st.info('#### No data to display')
+                st.markdown (f'#### Log data during {selected_dates[0]} to {selected_dates[-1]}')
+            st.dataframe(df)
+            st.download_button(label = 'Save to csv', data = convert_df(df), file_name = 'Log Summary Data.csv', mime = 'text/csv')
+
+                
 
     case 'Plot log summary':
-        # if not uploaded_csv_file:
-        # uploaded_csv_file= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
-        
-        # if st.button('Process ...'):
-        if not logs.summary_loaded():
-            st.warning('No csv files loaded, load files first ...') 
-        else:
-            dt_from, dt_to, dts = logs.get_df_dates()
-            selected_dates = st.multiselect('Dates', dts, dts)
 
-            tokens = logs.get_tokens(categ = 'user')
+        csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
+        df, dt_from, dt_to, dts = upload_csv_files(csv_files)
+
+        if not dt_from:  
+            st.info ("No data to plot")
+        else:
+            selected_dates = st.multiselect('Dates', dts, dts)
+            tokens = logs.get_tokens(df, categ = 'user')
             selected_categs = st.multiselect('Error Tokens', tokens, tokens)
             with st.spinner("Please Wait ... "):
-                # df=  upload_csv_files(uploaded_csv_file)
-                fig, strt, end = logs.plot_log_summary(selected_dates, selected_categs)
-                
-            txt = f'#### Log Summary during {strt} to {end}'
+                fig = logs.plot_log_summary(df, selected_dates, selected_categs)
+            if not selected_dates:
+                txt = f'#### Log Summary during {dt_from} to {dt_to}'
+            else:
+                txt = f'#### Log Summary during {selected_dates[0]} to {selected_dates[-1]}'
             st.markdown (txt)
+
             if fig:
                 st.pyplot(fig)
             else:
                 st.info ("No data to plot")
-                        
+                            
 
 def x():
     df = logs.export_email_quota_graph().fillna(0)

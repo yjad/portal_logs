@@ -3,5 +3,6 @@
 /ServerLogs/
 /data/
 /out/
+/old/
 /.vscode/
 /__pycache__/

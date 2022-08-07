@@ -11,8 +11,8 @@ import pandas as pd
 import country_codes
 import tokens_data
 
-# DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data" 
-CSV_PATH = r'.\data\log csv'
+DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data" 
+# CSV_PATH = r'.\data\log csv'
 nid_error_file = r".\out\nid_error.txt"   
 All_df = pd.DataFrame()
 Cntry = country_codes.Cntry
@@ -174,7 +174,7 @@ def summerize_portal_logs(fpath, load_db=False):
     #     sort_values(by=['dt', 'categ', 'line_no'], ascending=False)
     print ('Loading done ...')
     dts = sorted(log_df.dt.unique())
-    out_file_path = os.path.join(CSV_PATH, f"log summary-{dts[0]}-to-{dts[-1]}.csv")
+    out_file_path = os.path.join(DATA_FOLDER, f"log summary-{dts[0]}-to-{dts[-1]}.csv")
     log_df.to_csv(out_file_path, index=False)
    
 
@@ -190,8 +190,11 @@ def display_login_cntry(df, selected_dts):
     df.country.fillna('not logged', inplace=True)
     # dts_from, dts_to, _ = get_df_dates()
 
-    df = df.loc[df.token =='Logins', ['dt', 'country', 'Count']].set_index('country')
-    df = df.join(Cntry.set_index('Alpha-2 code'), how = 'left').sort_values(['Count'], ascending = False).reset_index()#.drop(columns='country')
+    df = df.loc[df.token =='Logins', ['Count', 'country']]
+    df = df.set_index('country').join(Cntry.set_index('Alpha-2 code'), how = 'left').groupby(['Country']).count().sort_values(['Count'], ascending = False)
+    print(df.columns)
+    # df = df.index.rename({'dt':'Count'})
+    return df.reset_index()
     if not df.empty:
         df_pivot = pd.pivot_table(df, index = 'Country', columns='dt', values = 'Count', aggfunc='count', margins=True, fill_value=0)
         # df_pivot.sort_values(df_pivot.columns[-1], inplace= True, ascending=False)   # sort by totals columns
@@ -200,6 +203,49 @@ def display_login_cntry(df, selected_dts):
     else:
         return None
 
+def display_reservation_cntry(df, selected_dts):
+    
+    if df.empty:
+        return None
+    # df = All_df.copy()
+    if len (selected_dts) > 0:  # no selection means select all
+        df = df[df.dt.isin(selected_dts)]
+    # df.rename (columns={'line_no':'Count'}, inplace = True)
+    df.country.fillna('not logged', inplace=True)
+    # dts_from, dts_to, _ = get_df_dates()
+
+    df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']), ['token', 'country', 'line_no', 'NID']]
+    df = df.set_index('country').join(Cntry.set_index('Alpha-2 code'), how = 'left')
+    if not df.empty:
+        df_pivot = pd.pivot_table(df, index = 'Country', columns='token', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
+        df_pivot['NID'] = df[['Country', 'NID']].groupby('Country').nunique()
+        df_pivot = df_pivot.sort_values('Logins', ascending=False).reset_index()
+        df_pivot.columns = ['Country', '# Logins', '# Reservations', '# Customers']
+        return df_pivot
+
+
+def top_login_customers_during_reservation(df):
+
+############################# to be completed ##############
+
+
+    if df.empty:
+        return None
+    # if len (selected_dts) > 0:  # no selection means select all
+        # df = df[df.dt.isin(selected_dts)]
+    
+    # df = df[df.dt.isin]
+    df.country.fillna('not logged', inplace=True)
+    # dts_from, dts_to, _ = get_df_dates()
+
+    df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']), ['token', 'country', 'line_no', 'NID']]
+    df = df.set_index('country').join(Cntry.set_index('Alpha-2 code'), how = 'left')
+    if not df.empty:
+        df_pivot = pd.pivot_table(df, index = 'Country', columns='token', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
+        df_pivot['NID'] = df[['Country', 'NID']].groupby('Country').nunique()
+        df_pivot = df_pivot.sort_values('Logins', ascending=False).reset_index()
+        df_pivot.columns = ['Country', '# Logins', '# Reservations', '# Customers']
+        return df_pivot
 
 def filter_df(df, selected_dts, selected_tokens):
     if selected_dts and selected_tokens:

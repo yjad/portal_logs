@@ -1,6 +1,7 @@
 # from base64 import decode
 # from numpy import true_divide
 # from distutils.util import strtobool
+from ast import Pass
 import pandas as pd
 import streamlit as st
 from streamlit_option_menu import option_menu
@@ -49,10 +50,10 @@ with st.sidebar:
             # 'Load log summary',
             # 'Email Quota grpah',
             # 'Failed Logins', 
-            'Login countries',
-            'Reservation by country',
-            'Show summary data',
-            'Plot log summary',
+            'Login/Reservation by country',
+            'Top customers # of logins',
+            'Log summary, Data',
+            'Log summary, Plot',
             'Settings'], 
         icons=['house', '', '', '', '','', 'gear'], menu_icon="cast", default_index=0)      #, default_index=1
     # selected
@@ -100,28 +101,28 @@ match selected:
     #             fig = logs.plot_failed_logins(uploaded_csv_file)
     #         st.pyplot(fig)
 
-    case 'Login countries':
-        csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
-        df, strt, end, dts = upload_csv_files(csv_files)
-        if strt: # files selected
-            selected_dates = st.multiselect('Dates', dts, dts)
+    # case 'Login countries':
+    #     csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
+    #     df, strt, end, dts = upload_csv_files(csv_files)
+    #     if strt: # files selected
+    #         selected_dates = st.multiselect('Dates', dts, dts)
             
-            with st.spinner("Please Wait ... "):
-                df = logs.display_login_cntry(df, selected_dates)
-            if not selected_dates:
-                txt = (f'#### Log data during {strt} to {end}')
-            else:
-                txt = f'#### # of Logins by country during {selected_dates[0]} to {selected_dates[-1]}'
-            st.markdown (txt)
-            if not df.empty:
-                st.dataframe(df)
-                st.download_button(label = 'Save to csv', data = convert_df(df), file_name = 'Login By Country.csv', mime = 'text/csv')
-            else:
-                st.info('#### No data to display')
-        # else:
-        #     st.info('#### No data to display')
+    #         with st.spinner("Please Wait ... "):
+    #             df = logs.display_login_cntry(df, selected_dates)
+    #         if not selected_dates:
+    #             txt = (f'#### Log data during {strt} to {end}')
+    #         else:
+    #             txt = f'#### # of Logins by country during {selected_dates[0]} to {selected_dates[-1]}'
+    #         st.markdown (txt)
+    #         if not df.empty:
+    #             st.dataframe(df)
+    #             st.download_button(label = 'Save to csv', data = convert_df(df), file_name = 'Login By Country.csv', mime = 'text/csv')
+    #         else:
+    #             st.info('#### No data to display')
+    #     # else:
+    #     #     st.info('#### No data to display')
 
-    case 'Reservation by country':
+    case 'Login/Reservation by country':
         csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
         df, strt, end, dts = upload_csv_files(csv_files)
         if strt: # files selected
@@ -140,7 +141,18 @@ match selected:
             else:
                 st.info('#### No data to display')
 
-    case 'Show summary data':
+    case 'Top customers # of logins':
+        csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
+        df, strt, end, dts = upload_csv_files(csv_files)
+        if strt: # files selected
+            times = sorted(list(pd.to_datetime(df.log_date.unique())))
+            start_time = st.select_slider('Start time?', options = times)
+            df = logs.top_login_customers_during_reservation(df, start_time)
+            st.dataframe(df[:10])
+            st.download_button(label = 'Save to csv', data = convert_df(df), file_name = 'Top customers # of logins.csv', mime = 'text/csv')
+
+
+    case 'Log summary, Data':
         csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
         df, dt_from, dt_to, dts =upload_csv_files(csv_files)
         
@@ -162,7 +174,7 @@ match selected:
 
                 
 
-    case 'Plot log summary':
+    case 'Log summary, Plot':
 
         csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
         df, dt_from, dt_to, dts = upload_csv_files(csv_files)

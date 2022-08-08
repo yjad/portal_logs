@@ -224,28 +224,26 @@ def display_reservation_cntry(df, selected_dts):
         return df_pivot
 
 
-def top_login_customers_during_reservation(df):
+def top_login_customers_during_reservation(df, start_time):
 
-############################# to be completed ##############
-
+    # start_time = '2022-08-07 09:00'
 
     if df.empty:
         return None
     # if len (selected_dts) > 0:  # no selection means select all
         # df = df[df.dt.isin(selected_dts)]
+    if start_time:
+        df = df[pd.to_datetime(df.log_date) > start_time]
     
-    # df = df[df.dt.isin]
-    df.country.fillna('not logged', inplace=True)
-    # dts_from, dts_to, _ = get_df_dates()
-
-    df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']), ['token', 'country', 'line_no', 'NID']]
-    df = df.set_index('country').join(Cntry.set_index('Alpha-2 code'), how = 'left')
-    if not df.empty:
-        df_pivot = pd.pivot_table(df, index = 'Country', columns='token', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
-        df_pivot['NID'] = df[['Country', 'NID']].groupby('Country').nunique()
-        df_pivot = df_pivot.sort_values('Logins', ascending=False).reset_index()
-        df_pivot.columns = ['Country', '# Logins', '# Reservations', '# Customers']
-        return df_pivot
+    df = df.loc[df.token.isin(['Logins']), ['line_no', 'NID']] # successful logins
+    df = df.groupby('NID').count().sort_values('line_no', ascending=False)#[:50]
+    # if not df.empty:
+    #     df_pivot = pd.pivot_table(df, index = 'Country', columns='token', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
+    #     df_pivot['NID'] = df[['Country', 'NID']].groupby('Country').nunique()
+    #     df_pivot = df_pivot.sort_values('Logins', ascending=False).reset_index()
+    df =df.reset_index()
+    df.columns = ['NID', '# successfull Logins']
+    return df
 
 def filter_df(df, selected_dts, selected_tokens):
     if selected_dts and selected_tokens:

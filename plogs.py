@@ -230,20 +230,22 @@ def top_login_customers_during_reservation(df, start_time):
 
     if df.empty:
         return None
-    # if len (selected_dts) > 0:  # no selection means select all
-        # df = df[df.dt.isin(selected_dts)]
     if start_time:
         df = df[pd.to_datetime(df.log_date) > start_time]
     
-    df = df.loc[df.token.isin(['Logins']), ['line_no', 'NID']] # successful logins
-    df = df.groupby('NID').count().sort_values('line_no', ascending=False)#[:50]
-    # if not df.empty:
-    #     df_pivot = pd.pivot_table(df, index = 'Country', columns='token', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
-    #     df_pivot['NID'] = df[['Country', 'NID']].groupby('Country').nunique()
-    #     df_pivot = df_pivot.sort_values('Logins', ascending=False).reset_index()
-    df =df.reset_index()
-    df.columns = ['NID', '# successfull Logins']
-    return df
+    # df = df.loc[df.token.isin(['Logins']), ['line_no', 'NID']] # successful logins
+    # df = df.groupby('NID').count().sort_values('line_no', ascending=False)#[:50]
+    # df =df.reset_index()
+    # df.columns = ['NID', '# successfull Logins']
+
+    x = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']),['NID', 'token', 'dt']]
+    x = pd.pivot_table(x, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
+    x['confirmLandReservation True'] = x['confirmLandReservation True'].fillna('')
+    x = x.reset_index()
+    x.columns = ['NID', '# Logins', 'Reservation']  
+    x.loc[x.Reservation == 1.0, ['Reservation']] = 'True'
+    x['# Logins'] = x['# Logins'].astype(int, errors = 'ignore')
+    return x
 
 def filter_df(df, selected_dts, selected_tokens):
     if selected_dts and selected_tokens:

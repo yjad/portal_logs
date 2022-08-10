@@ -240,7 +240,10 @@ def top_login_customers_during_reservation(df, start_time):
 
     x = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']),['NID', 'token', 'dt']]
     x = pd.pivot_table(x, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
-    x['confirmLandReservation True'] = x['confirmLandReservation True'].fillna('')
+    if 'confirmLandReservation True' not in x.columns:
+        x['confirmLandReservation True'] = ''
+    else:
+        x['confirmLandReservation True'] = x['confirmLandReservation True'].fillna('')
     x = x.reset_index()
     x.columns = ['NID', '# Logins', 'Reservation']  
     x.loc[x.Reservation == 1.0, ['Reservation']] = 'True'
@@ -258,6 +261,28 @@ def filter_df(df, selected_dts, selected_tokens):
         pass# work of all df
     return df
 
+def login_stats(df):
+    x = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']),['NID', 'token', 'dt']]
+    x = pd.pivot_table(x, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
+    if 'confirmLandReservation True' not in x.columns:
+         x['confirmLandReservation True'] = 0
+    x['confirmLandReservation True'] = x['confirmLandReservation True'].fillna(0)
+    x = x.reset_index()
+    x.columns = ['NID', '# Logins', 'Reservation']  
+    # x.loc[x.Reservation == 1.0, ['Reservation']] = 'True'
+    x['# Logins'] = x['# Logins'].astype(int, errors = 'ignore')
+
+    bins = [0, 10, 50, 100, 9999]   # distplay stats in bins
+    labels = ['1-10', '11-50', '51-100', '> 100']
+    x['bins'] = pd.cut(x['# Logins'], bins = bins, labels= labels)
+    stats = x.groupby('bins').sum()
+    stats['NID'] = x.drop_duplicates('NID').groupby(['bins']).count()['NID']
+    stats['avg'] = (stats['# Logins']/stats['NID']).fillna(0).astype(int)
+    stats = stats.astype(int, errors = 'ignore').reset_index()
+    stats.columns = [' No of logins per customer', 'Total # logins', '# of reservations', '# of customers', 'Avg logins/customer']
+    stats = stats.iloc[:,[3,0,1,2, 4]] # relocate
+
+    return stats
 
 def plot_log_summary(df, selected_dts, selected_tokens):
 

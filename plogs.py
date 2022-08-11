@@ -314,3 +314,9 @@ def get_tokens(df, categ=None):
         return df.token.unique()
     else:   # user categ only 
         return df[df.categ == categ].token.unique()
+
+def get_reservation_nid(df):
+    x = df.loc[df.token.isin(['confirmLandReservation True']), ['NID', 'log_date']]
+    y = df.loc[df.NID.isin(x.NID), ['NID','log_date', 'token' ]].sort_values(['NID', 'log_date'])
+    y.token.loc[y.token == 'confirmLandReservation True' ] = 'Land Reservation'
+    return x,y

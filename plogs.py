@@ -109,6 +109,7 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp):
             case 'login True':  token = 'Logins'
             case 'login False':  token = 'Failed Logins'
             case 'logout True':  token = 'Logout'
+            # case 'confirmLandReservation True':  token = 'Land Reservatation'
             case _: token = x
 
         nid = str(res["nid"])

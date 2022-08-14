@@ -251,7 +251,8 @@ def top_login_customers_during_reservation(df, start_time):
     x = x.reset_index()
     x.columns = ['NID', '# Logins', 'Reservation']  
     x.loc[x.Reservation == 1.0, ['Reservation']] = 'True'
-    x['# Logins'] = x['# Logins'].astype(int, errors = 'ignore')
+    x['NID'] = x['NID'].astype('int64')#.astype(str)
+    x['# Logins'] = x['# Logins'].fillna(0).astype(int)
     return x
 
 def filter_df(df, selected_dts, selected_tokens):
@@ -274,17 +275,19 @@ def login_stats(df):
     x = x.reset_index()
     x.columns = ['NID', '# Logins', 'Reservation']  
     # x.loc[x.Reservation == 1.0, ['Reservation']] = 'True'
-    x['# Logins'] = x['# Logins'].astype(int, errors = 'ignore')
+    x['# Logins'] = x['# Logins'].fillna(0).astype(int)
 
     bins = [0, 10, 50, 100, 9999]   # distplay stats in bins
-    labels = ['1-10', '11-50', '51-100', '> 100']
+    labels = ['1 to 10', '11 to 50', '51 to 100', '> 100']
     x['bins'] = pd.cut(x['# Logins'], bins = bins, labels= labels)
     stats = x.groupby('bins').sum()
+    print (stats.columns)
     stats['NID'] = x.drop_duplicates('NID').groupby(['bins']).count()['NID']
     stats['avg'] = (stats['# Logins']/stats['NID']).fillna(0).astype(int)
-    stats = stats.astype(int, errors = 'ignore').reset_index()
-    stats.columns = [' No of logins per customer', 'Total # logins', '# of reservations', '# of customers', 'Avg logins/customer']
-    stats = stats.iloc[:,[3,0,1,2, 4]] # relocate
+    stats = stats.fillna(0).astype(int).reset_index()
+    stats.columns = [' No of logins per customer', '# of customers', 'Total # logins', '# of reservations',  'Avg logins/ customer']
+    print (stats)
+    # stats = stats.iloc[:,[3,0,1,2, 4]] # relocate
 
     return stats
 
@@ -319,6 +322,7 @@ def get_tokens(df, categ=None):
         return df[df.categ == categ].token.unique()
 
 def get_reservation_nid(df):
+    df.NID = df.NID.fillna(0).astype('int64')
     x = df.loc[df.token.isin(['confirmLandReservation True']), ['NID', 'log_date']]
     y = df.loc[df.NID.isin(x.NID), ['NID','log_date', 'token' ]].sort_values(['NID', 'log_date'])
     y.token.loc[y.token == 'confirmLandReservation True' ] = 'Land Reservation'

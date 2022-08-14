@@ -1,6 +1,6 @@
 import streamlit as st
 import plogs as logs 
-import st_utils as stu
+import Home as stu
 
 csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
 df, strt, end, dts = stu.upload_csv_files(csv_files)

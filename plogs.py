@@ -327,9 +327,9 @@ def get_tokens(df, categ=None):
         return df[df.categ == categ].token.unique()
 
 def get_reservation_nid(df):
-    print (df.NID.dtypes)
+    # print (df.NID.dtypes)
     if df.NID.dtypes == float:
-        df.NID.astype(np.int64)
+        df.NID = df.NID.fillna(0).astype(np.int64)
 
     df.NID = df.NID.fillna('').astype(str)
     cust_nos = df.loc[df.token.isin(['confirmLandReservation True']), ['NID', 'log_date']].sort_values(['log_date', 'NID'])

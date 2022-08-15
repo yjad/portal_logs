@@ -1,6 +1,7 @@
 import json
 import os
-from numpy import r_
+from pickletools import int4
+import numpy as np
 
 from tzlocal import get_localzone_name
 
@@ -242,8 +243,8 @@ def top_login_customers_during_reservation(df, start_time):
     # df =df.reset_index()
     # df.columns = ['NID', '# successfull Logins']
 
-    x = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']),['NID', 'token', 'dt']]
-    x = pd.pivot_table(x, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
+    df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']),['NID', 'token', 'dt', 'IP_address']]
+    x = pd.pivot_table(df, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
     if 'confirmLandReservation True' not in x.columns:
         x['confirmLandReservation True'] = ''
     else:
@@ -253,6 +254,10 @@ def top_login_customers_during_reservation(df, start_time):
     x.loc[x.Reservation == 1.0, ['Reservation']] = 'True'
     x['NID'] = x['NID'].astype('int64')#.astype(str)
     x['# Logins'] = x['# Logins'].fillna(0).astype(int)
+    no_ips = df[['NID', 'IP_address']].groupby('NID').nunique()
+    
+    x = x.set_index('NID')
+    x['# IPs']=no_ips
     return x
 
 def filter_df(df, selected_dts, selected_tokens):
@@ -322,8 +327,19 @@ def get_tokens(df, categ=None):
         return df[df.categ == categ].token.unique()
 
 def get_reservation_nid(df):
-    df.NID = df.NID.fillna(0).astype('int64')
-    x = df.loc[df.token.isin(['confirmLandReservation True']), ['NID', 'log_date']]
-    y = df.loc[df.NID.isin(x.NID), ['NID','log_date', 'token' ]].sort_values(['NID', 'log_date'])
-    y.token.loc[y.token == 'confirmLandReservation True' ] = 'Land Reservation'
-    return x,y
+    print (df.NID.dtypes)
+    if df.NID.dtypes == float:
+        df.NID.astype(np.int64)
+
+    df.NID = df.NID.fillna('').astype(str)
+    cust_nos = df.loc[df.token.isin(['confirmLandReservation True']), ['NID', 'log_date']].sort_values(['log_date', 'NID'])
+    
+
+    res_data = df.loc[df.NID.isin(cust_nos.NID), ['NID','log_date', 'token' ]]
+    res_data.token.loc[res_data.token == 'confirmLandReservation True' ] = 'Land Reservation'
+    
+    cust_list = cust_nos.NID + " --> Reservation time: " + cust_nos.log_date
+
+    return cust_list, res_data
+
+

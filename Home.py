@@ -10,7 +10,8 @@ def upload_csv_files(csv_files):
         with st.spinner("Please Wait ... "):
             All_df = pd.DataFrame() # reset
             for f in csv_files:
-                df_1  = pd.read_csv(f, low_memory=False)
+                df_1  = pd.read_csv(f,  compression= 'zip')
+                # df_1  = pd.read_csv(f, low_memory=False)
                 All_df = pd.concat([All_df, df_1])
             All_df.drop_duplicates(subset = ['dt', 'line_no'], inplace=True)
             dts = sorted(All_df.dt.unique())

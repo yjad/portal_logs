@@ -2,6 +2,7 @@ import json
 import os
 from pickletools import int4
 import numpy as np
+import zipfile
 
 from tzlocal import get_localzone_name
 
@@ -27,6 +28,52 @@ def resolve_log_files(file_path):
             log_files.append(os.path.join(folder,f))
     return log_files
 
+# Process one zip file
+def zip_log_to_df(zip_file):
+    out_error = open(nid_error_file, "wt", encoding='utf-8')
+    col = ["log_date","node","line_no", "NID", "log_type" , 
+                    "country", "IP_address", "service", "token", "categ", "error_line"]
+    # log_pd = pd.DataFrame(columns=col)
+    log_pd = pd.DataFrame()
+    log_lst = []
+
+    with zipfile.ZipFile(zip_file, "r") as zf:
+        for fname in zf.namelist():
+            line_no = 0
+            print (fname)
+            with zf.open(fname) as f:
+                while True:
+                    txt = f.readline()
+                    # print (len(txt), txt)
+                    if not txt: break # end of file
+                    line_no += 1
+
+                    # if line_no > 100: break
+                    # if line_no % 10000 == 0: print (line_no)
+                    if line_no % 100 == 0: print (line_no)
+                    
+                    txt = txt.decode('utf-8')
+                    log_type = txt[24:29]
+                    if log_type in ('INFO ', 'WARN '): continue
+                    try:
+                        dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
+                    except:
+                        out_error.write('***Invalid record format***, '+ str(line_no) + ", ERROR," + str(txt))
+                        continue    # Invalid record format, ignore rest of parsing
+                    rec = None
+                    if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
+                        rec = parse_nid_rec(txt, line_no, out_error, dt)
+                        # pass
+                    else:
+                        rec  = parse_tech_rec(txt, line_no, out_error, dt)
+
+                    if not rec: continue    # invalid line, skip it
+                    # print ('------------', rec)
+                    log_lst.append(rec)  
+
+    out_error.close()
+    log_pd = pd.DataFrame(log_lst, columns = col)
+    return log_pd
 
 def log_2_df(file_path):
    
@@ -169,15 +216,18 @@ def parse_tech_rec(txt, line_no, out_error, dt):
 # summerize log file(s). Load logins summary into DB and save summary csv file with  
 def summerize_portal_logs(fpath, load_db=False):
 
-    log_df = log_2_df (fpath)
+    # log_df = log_2_df (fpath)
+    log_df = zip_log_to_df(fpath)       # summerize one zip file
     log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date 
 
     # x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count().\
     #     sort_values(by=['dt', 'categ', 'line_no'], ascending=False)
     print ('Loading done ...')
     dts = sorted(log_df.dt.unique())
-    out_file_path = os.path.join(DATA_FOLDER, f"log summary-{dts[0]}-to-{dts[-1]}.csv")
-    log_df.to_csv(out_file_path, index=False)
+    for d in dts: # split multi-date log file into a seperate zip csv file for each day 
+        out_file_path = os.path.join(DATA_FOLDER, f"log summary-{d}.zip")
+        log_df.loc[log_df.dt == d].to_csv(out_file_path, index=False)
+                # compression={'method': 'zip', 'compresslevel': 1, 'mtime': 1})
    
 
 def display_login_cntry(df, selected_dts):
@@ -194,7 +244,7 @@ def display_login_cntry(df, selected_dts):
 
     df = df.loc[df.token =='Logins', ['Count', 'country']]
     df = df.set_index('country').join(Cntry.set_index('Alpha-2 code'), how = 'left').groupby(['Country']).count().sort_values(['Count'], ascending = False)
-    print(df.columns)
+    # print(df.columns)
     # df = df.index.rename({'dt':'Count'})
     return df.reset_index()
     if not df.empty:
@@ -286,12 +336,12 @@ def login_stats(df):
     labels = ['1 to 10', '11 to 50', '51 to 100', '> 100']
     x['bins'] = pd.cut(x['# Logins'], bins = bins, labels= labels)
     stats = x.groupby('bins').sum()
-    print (stats.columns)
+    # print (stats.columns)
     stats['NID'] = x.drop_duplicates('NID').groupby(['bins']).count()['NID']
     stats['avg'] = (stats['# Logins']/stats['NID']).fillna(0).astype(int)
     stats = stats.fillna(0).astype(int).reset_index()
-    stats.columns = [' No of logins per customer', '# of customers', 'Total # logins', '# of reservations',  'Avg logins/ customer']
-    print (stats)
+    # stats.columns = [' No of logins per customer', '# of customers', 'Total # logins', '# of reservations',  'Avg logins/ customer']
+    # print (stats)
     # stats = stats.iloc[:,[3,0,1,2, 4]] # relocate
 
     return stats

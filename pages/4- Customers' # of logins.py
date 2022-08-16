@@ -3,7 +3,7 @@ import streamlit as st
 import plogs as logs 
 import Home as stu
 
-csv_files= st.file_uploader('Select Log summary file',type=["csv"], accept_multiple_files = True)
+csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = True)
 df, strt, end, dts = stu.upload_csv_files(csv_files)
 if strt: # files selected
         stu.display_data_dates(strt, end)

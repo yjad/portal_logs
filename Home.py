@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-@st.experimental_memo(suppress_st_warning=True)
+# @st.experimental_memo(suppress_st_warning=True)
 def upload_csv_files(csv_files):
     if not csv_files:
         st.warning('No csv files loaded, load files first ...') 

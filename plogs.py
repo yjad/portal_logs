@@ -28,6 +28,8 @@ def resolve_log_files(file_path):
             log_files.append(os.path.join(folder,f))
     return log_files
 
+
+
 # Process one zip file
 def zip_log_to_df(zip_file):
     out_error = open(nid_error_file, "wt", encoding='utf-8')
@@ -213,11 +215,12 @@ def parse_tech_rec(txt, line_no, out_error, dt):
     return rec_lst
 
 
-# summerize log file(s). Load logins summary into DB and save summary csv file with  
+# summerize log file(s). save summary to csv file with  
 def summerize_portal_logs(fpath, load_db=False):
 
-    # log_df = log_2_df (fpath)
-    log_df = zip_log_to_df(fpath)       # summerize one zip file
+    log_df = log_2_df (fpath)
+    
+    # log_df = zip_log_to_df(fpath)       # summerize one zip file
     log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date 
 
     # x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count().\

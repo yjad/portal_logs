@@ -2,7 +2,8 @@ import json
 import os
 from pickletools import int4
 import numpy as np
-import zipfile
+import zipfile, tarfile
+
 
 from tzlocal import get_localzone_name
 
@@ -28,6 +29,28 @@ def resolve_log_files(file_path):
             log_files.append(os.path.join(folder,f))
     return log_files
 
+# -----------------------------
+# process one zip or tar file
+# -----------------------------
+def yield_zip_file(file_path, file_type):
+
+    match file_type:
+        case '.csv':
+            pass    # not supported
+        case '.zip':
+            with zipfile.ZipFile(file_path, "r") as zf:
+                for fname in zf.namelist():
+                    f = zf.open(fname) 
+                    print (fname)
+                    yield f
+
+        case '.gz': # tarfile
+            print (file_path)
+            with tarfile.open(fileobj = file_path, mode = "r:gz") as tar:
+                for member in tar.getmembers():
+                    f=tar.extractfile(member)
+                    print (f.name)
+                    yield f
 
 
 # Process one zip file
@@ -38,40 +61,52 @@ def zip_log_to_df(zip_file):
     # log_pd = pd.DataFrame(columns=col)
     log_pd = pd.DataFrame()
     log_lst = []
+    if type(zip_file) == str :
+        file_type = 'file'
+        if os.path.isdir(zip_file):
+            # log_files = resolve_log_files(file_path)
+            pass
+        else:
+            log_files = [zip_file]
+            file_type = os.path.splitext(log_files[0])[1]
+    else:   # buffer of one or more files
+        file_type = os.path.splitext(zip_file.name)[1]
+        # print (log_file.name)
 
-    with zipfile.ZipFile(zip_file, "r") as zf:
-        for fname in zf.namelist():
-            line_no = 0
-            print (fname)
-            with zf.open(fname) as f:
-                while True:
-                    txt = f.readline()
-                    # print (len(txt), txt)
-                    if not txt: break # end of file
-                    line_no += 1
 
-                    # if line_no > 100: break
-                    # if line_no % 10000 == 0: print (line_no)
-                    if line_no % 100 == 0: print (line_no)
-                    
-                    txt = txt.decode('utf-8')
-                    log_type = txt[24:29]
-                    if log_type in ('INFO ', 'WARN '): continue
-                    try:
-                        dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
-                    except:
-                        out_error.write('***Invalid record format***, '+ str(line_no) + ", ERROR," + str(txt))
-                        continue    # Invalid record format, ignore rest of parsing
-                    rec = None
-                    if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
-                        rec = parse_nid_rec(txt, line_no, out_error, dt)
-                        # pass
-                    else:
-                        rec  = parse_tech_rec(txt, line_no, out_error, dt)
+    zfiles = yield_zip_file(zip_file, file_type)
+    for f in zfiles:
+        line_no = 0
+        # print (fname)
+        while True:
+            txt = f.readline()
+            # print (len(txt), txt)
+            if not txt: break # end of file
+            line_no += 1
 
-                    if not rec: continue    # invalid line, skip it
-                    # print ('------------', rec)
-                    log_lst.append(rec)  
+            # if line_no > 100: break
+            # if line_no % 10000 == 0: print (line_no)
+            if line_no % 100 == 0: print (line_no)
+            
+            txt = txt.decode('utf-8')
+            log_type = txt[24:29]
+            
+            try:
+                dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
+            except:
+                out_error.write('***Invalid record format***, '+ str(line_no) + ", ERROR," + str(txt))
+                continue    # Invalid record format, ignore rest of parsing
+            rec = None
+            if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
+                rec = parse_nid_rec(txt, line_no, out_error, dt, log_type)
+                # pass
+            else:
+                if log_type in ('INFO ', 'WARN '): continue # skip info for tech errors
+                rec  = parse_tech_rec(txt, line_no, out_error, dt)
+
+            if not rec: continue    # invalid line, skip it
+            # print ('------------', rec)
+            log_lst.append(rec)  
 
     out_error.close()
     log_pd = pd.DataFrame(log_lst, columns = col)
@@ -140,7 +175,7 @@ def log_2_df(file_path):
     return log_pd
 
 
-def parse_nid_rec(txt, line_no, out_error, log_timestamp):
+def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type):
 
     p = txt.find ("{")
     v = str(txt[p:])
@@ -177,7 +212,7 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp):
             token = "Unclassified"
             service = 'Unclassified'
 
-    log_type = 'ERROR'
+    # log_type = 'ERROR'
     error_categ = 'user'
     rec_lst = [log_timestamp, None, line_no, nid, log_type, cntry, ip, service, token, error_categ, None]
     return rec_lst
@@ -218,9 +253,9 @@ def parse_tech_rec(txt, line_no, out_error, dt):
 # summerize log file(s). save summary to csv file with  
 def summerize_portal_logs(fpath, load_db=False):
 
-    log_df = log_2_df (fpath)
+    # log_df = log_2_df (fpath)
     
-    # log_df = zip_log_to_df(fpath)       # summerize one zip file
+    log_df = zip_log_to_df(fpath)       # summerize one zip file
     log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date 
 
     # x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count().\

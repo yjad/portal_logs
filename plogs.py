@@ -1,8 +1,10 @@
 import json
 import os
 from pickletools import int4
+from sqlite3 import SQLITE_CREATE_INDEX
 import numpy as np
 import zipfile, tarfile
+from csv import QUOTE_ALL
 
 
 from tzlocal import get_localzone_name
@@ -43,9 +45,8 @@ def yield_zip_file(file_path, file_type):
                     f = zf.open(fname) 
                     print (fname)
                     yield f
-
+            
         case '.gz': # tarfile
-            print (file_path)
             with tarfile.open(fileobj = file_path, mode = "r:gz") as tar:
                 for member in tar.getmembers():
                     f=tar.extractfile(member)
@@ -86,7 +87,7 @@ def zip_log_to_df(zip_file):
 
             # if line_no > 100: break
             # if line_no % 10000 == 0: print (line_no)
-            if line_no % 100 == 0: print (line_no)
+            if line_no % 10000 == 0: print (line_no)
             
             txt = txt.decode('utf-8')
             log_type = txt[24:29]
@@ -102,7 +103,7 @@ def zip_log_to_df(zip_file):
                 # pass
             else:
                 if log_type in ('INFO ', 'WARN '): continue # skip info for tech errors
-                rec  = parse_tech_rec(txt, line_no, out_error, dt)
+                rec  = parse_tech_rec(txt, line_no, out_error, dt, log_type)
 
             if not rec: continue    # invalid line, skip it
             # print ('------------', rec)
@@ -218,11 +219,11 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type):
     return rec_lst
 
 
-def parse_tech_rec(txt, line_no, out_error, dt):
+def parse_tech_rec(txt, line_no, out_error, dt, log_type):
 
     global search_tokens
 
-    log_type = 'ERROR'
+    # log_type = 'ERROR'
     if len(txt) < 90:   # empty error
         rec_lst = [dt, None, line_no, None, log_type, None, None, None, 'Empty Error', 'tech' , None]
         return rec_lst
@@ -237,6 +238,7 @@ def parse_tech_rec(txt, line_no, out_error, dt):
             else:
                 error_token = token.desc
             error_categ = token.categ
+            txt= None   # error text is not needed in this case
             classified = True
             break    
 
@@ -264,8 +266,7 @@ def summerize_portal_logs(fpath, load_db=False):
     dts = sorted(log_df.dt.unique())
     for d in dts: # split multi-date log file into a seperate zip csv file for each day 
         out_file_path = os.path.join(DATA_FOLDER, f"log summary-{d}.zip")
-        log_df.loc[log_df.dt == d].to_csv(out_file_path, index=False)
-                # compression={'method': 'zip', 'compresslevel': 1, 'mtime': 1})
+        log_df.loc[log_df.dt == d].to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"log summary-{d}.csv"})
    
 
 def display_login_cntry(df, selected_dts):
@@ -319,18 +320,11 @@ def display_reservation_cntry(df, selected_dts):
 
 def top_login_customers_during_reservation(df, start_time):
 
-    # start_time = '2022-08-07 09:00'
-
     if df.empty:
         return None
     if start_time:
         df = df[pd.to_datetime(df.log_date) > start_time]
     
-    # df = df.loc[df.token.isin(['Logins']), ['line_no', 'NID']] # successful logins
-    # df = df.groupby('NID').count().sort_values('line_no', ascending=False)#[:50]
-    # df =df.reset_index()
-    # df.columns = ['NID', '# successfull Logins']
-
     df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']),['NID', 'token', 'dt', 'IP_address']]
     x = pd.pivot_table(df, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
     if 'confirmLandReservation True' not in x.columns:
@@ -343,9 +337,10 @@ def top_login_customers_during_reservation(df, start_time):
     x['NID'] = x['NID'].astype('int64')#.astype(str)
     x['# Logins'] = x['# Logins'].fillna(0).astype(int)
     no_ips = df[['NID', 'IP_address']].groupby('NID').nunique()
-    
-    x = x.set_index('NID')
-    x['# IPs']=no_ips
+    no_ips.index = no_ips.index.astype(str)
+    x.NID = x.NID.astype(str)
+    x = pd.concat([x.set_index('NID'),no_ips], axis = 'columns')    # concat side by side using index
+    x = x.rename(columns = {'IP_address':'# of IPs'})
     return x
 
 def filter_df(df, selected_dts, selected_tokens):

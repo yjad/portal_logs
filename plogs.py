@@ -47,7 +47,13 @@ def yield_zip_file(file_path, file_type):
                     yield f
             
         case '.gz': # tarfile
-            with tarfile.open(fileobj = file_path, mode = "r:gz") as tar:
+            if type(file_path) == str:
+                file_name = file_path
+                file_obj = None
+            else:
+                file_name = None
+                file_obj = file_path
+            with tarfile.open(name  = file_name, fileobj = file_obj, mode = "r:gz") as tar:
                 for member in tar.getmembers():
                     f=tar.extractfile(member)
                     print (f.name)
@@ -334,7 +340,7 @@ def top_login_customers_during_reservation(df, start_time):
     x = x.reset_index()
     x.columns = ['NID', '# Logins', 'Reservation']  
     x.loc[x.Reservation == 1.0, ['Reservation']] = 'True'
-    x['NID'] = x['NID'].astype('int64')#.astype(str)
+    # x['NID'] = x['NID'].astype('int64')#.astype(str)
     x['# Logins'] = x['# Logins'].fillna(0).astype(int)
     no_ips = df[['NID', 'IP_address']].groupby('NID').nunique()
     no_ips.index = no_ips.index.astype(str)

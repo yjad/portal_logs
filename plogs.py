@@ -331,15 +331,19 @@ def top_login_customers_during_reservation(df, start_time):
     if start_time:
         df = df[pd.to_datetime(df.log_date) > start_time]
     
-    df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']),['NID', 'token', 'dt', 'IP_address']]
+    df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True', 'confirmReservation True']),['NID', 'token', 'dt', 'IP_address']]
     x = pd.pivot_table(df, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
-    if 'confirmLandReservation True' not in x.columns:
-        x['confirmLandReservation True'] = ''
-    else:
-        x['confirmLandReservation True'] = x['confirmLandReservation True'].fillna('')
+
+    if 'confirmLandReservation True' not in x.columns and 'confirmReservation True' not in x.columns:  # None reservation logs
+        x['Reservation'] = ''
+    # elif 'confirmLandReservation True' in x.columns:        # Land reservation
+    #     x['Reservation'] = x['confirmLandReservation True'].fillna('')
+    # elif 'confirmReservation True' in x.columns:       # unit reservation
+    #     x['Reservation'] = x['confirmReservation True'].fillna('')
     x = x.reset_index()
+    
     x.columns = ['NID', '# Logins', 'Reservation']  
-    x.loc[x.Reservation == 1.0, ['Reservation']] = 'True'
+    x.loc[x.Reservation == 1, ['Reservation']] = 'True'
     # x['NID'] = x['NID'].astype('int64')#.astype(str)
     x['# Logins'] = x['# Logins'].fillna(0).astype(int)
     no_ips = df[['NID', 'IP_address']].groupby('NID').nunique()
@@ -347,7 +351,7 @@ def top_login_customers_during_reservation(df, start_time):
     x.NID = x.NID.astype(str)
     x = pd.concat([x.set_index('NID'),no_ips], axis = 'columns')    # concat side by side using index
     x = x.rename(columns = {'IP_address':'# of IPs'})
-    return x
+    return x.fillna('')
 
 def filter_df(df, selected_dts, selected_tokens):
     if selected_dts and selected_tokens:
@@ -361,11 +365,11 @@ def filter_df(df, selected_dts, selected_tokens):
     return df
 
 def login_stats(df):
-    x = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']),['NID', 'token', 'dt']]
+    x = df.loc[df.token.isin(['Logins', 'confirmLandReservation True', 'confirmReservation True']),['NID', 'token', 'dt']]
     x = pd.pivot_table(x, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
-    if 'confirmLandReservation True' not in x.columns:
+    if 'confirmLandReservation True' not in x.columns and 'confirmReservation True' not in x.columns:
          x['confirmLandReservation True'] = 0
-    x['confirmLandReservation True'] = x['confirmLandReservation True'].fillna(0)
+    # x['confirmLandReservation True'] = x['confirmLandReservation True'].fillna(0)
     x = x.reset_index()
     x.columns = ['NID', '# Logins', 'Reservation']  
     # x.loc[x.Reservation == 1.0, ['Reservation']] = 'True'
@@ -374,7 +378,8 @@ def login_stats(df):
     bins = [0, 10, 50, 100, 9999]   # distplay stats in bins
     labels = ['1 to 10', '11 to 50', '51 to 100', '> 100']
     x['bins'] = pd.cut(x['# Logins'], bins = bins, labels= labels)
-    stats = x.groupby('bins').sum()
+    # x.to_csv('./out/xxx.csv', index=False)
+    stats = x[['bins', '# Logins', 'Reservation']].groupby('bins').sum()
     # print (stats.columns)
     stats['NID'] = x.drop_duplicates('NID').groupby(['bins']).count()['NID']
     stats['avg'] = (stats['# Logins']/stats['NID']).fillna(0).astype(int)
@@ -421,11 +426,10 @@ def get_reservation_nid(df):
         df.NID = df.NID.fillna(0).astype(np.int64)
 
     df.NID = df.NID.fillna('').astype(str)
-    cust_nos = df.loc[df.token.isin(['confirmLandReservation True']), ['NID', 'log_date']].sort_values(['log_date', 'NID'])
+    cust_nos = df.loc[df.token.isin(['confirmLandReservation True', 'confirmReservation True']), ['NID', 'log_date']].sort_values(['log_date', 'NID'])
     
-
     res_data = df.loc[df.NID.isin(cust_nos.NID), ['NID','log_date', 'token' ]]
-    res_data.token.loc[res_data.token == 'confirmLandReservation True' ] = 'Land Reservation'
+    res_data.token.loc[res_data.token == 'confirmLandReservation True'] = 'Land Reservation'
     
     cust_list = cust_nos.NID + " --> Reservation time: " + cust_nos.log_date
 

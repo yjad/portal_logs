@@ -12,7 +12,7 @@ else:
     stu.display_data_dates(dt_from, dt_to)
     selected_dates = st.multiselect('Dates', dts, dts)
     tokens = logs.get_tokens(df, categ = 'user')
-    selected_categs = st.multiselect('Error Tokens', tokens, tokens)
+    selected_categs = st.multiselect('Error Tokens', tokens)
     with st.spinner("Please Wait ... "):
         fig = logs.plot_log_summary(df, selected_dates, selected_categs)
     if not selected_dates:

@@ -14,7 +14,7 @@ else:
     selected_dates = st.multiselect('Dates', dts, dts)
     tokens = df.token.unique()
     # return All_df[All_df.categ == categ].token.unique()
-    selected_tokens = st.multiselect('Error Tokens', tokens, tokens)
+    selected_tokens = st.multiselect('Error Tokens', tokens)
     with st.spinner("Please Wait ... "):
         df = logs.get_df_data(df, selected_dates, selected_tokens)
     if not selected_dates:

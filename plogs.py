@@ -16,7 +16,7 @@ import pandas as pd
 import country_codes
 import tokens_data
 
-DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data" 
+DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary" 
 # CSV_PATH = r'.\data\log csv'
 nid_error_file = r".\out\nid_error.txt"   
 All_df = pd.DataFrame()
@@ -272,8 +272,9 @@ def summerize_portal_logs(fpath, load_db=False):
     dts = sorted(log_df.dt.unique())
     for d in dts: # split multi-date log file into a seperate zip csv file for each day 
         out_file_path = os.path.join(DATA_FOLDER, f"log summary-{d}.zip")
-        log_df.loc[log_df.dt == d].to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"log summary-{d}.csv"})
-   
+        df = log_df.loc[log_df.dt == d]
+        df.to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"log summary-{d}.csv"})
+        update_summary_db(df)
 
 def display_login_cntry(df, selected_dts):
     global Cntry
@@ -434,5 +435,9 @@ def get_reservation_nid(df):
     cust_list = cust_nos.NID + " --> Reservation time: " + cust_nos.log_date
 
     return cust_list, res_data
+
+def update_summary_db(df):
+    df_pivot = pd.pivot_table(df, index = ['categ','token'], columns='dt', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
+    return df_pivot
 
 

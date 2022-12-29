@@ -64,7 +64,8 @@ def yield_zip_file(file_path, file_type):
 def zip_log_to_df(zip_file):
     out_error = open(nid_error_file, "wt", encoding='utf-8')
     col = ["log_date","node","line_no", "NID", "log_type" , 
-                    "country", "IP_address", "service", "token", "categ", "error_line"]
+                    "country", "IP_address", "service", "token", "categ", "error_line",
+                    'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum']
     # log_pd = pd.DataFrame(columns=col)
     log_pd = pd.DataFrame()
     log_lst = []
@@ -133,7 +134,8 @@ def log_2_df(file_path):
 
     out_error = open(nid_error_file, "wt", encoding='utf-8')
     col = ["log_date","node","line_no", "NID", "log_type" , 
-                    "country", "IP_address", "service", "token", "categ", "error_line"]
+                    "country", "IP_address", "service", "token", "categ", "error_line",
+                    'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum']
     # log_pd = pd.DataFrame(columns=col)
     log_pd = pd.DataFrame()
     log_lst = []
@@ -200,13 +202,13 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type):
         match x:
             case 'login True':  token = 'Logins'
             case 'login False':  token = 'Failed Logins'
-            case 'logout True':  token = 'Logout'
-            # case 'confirmLandReservation True':  token = 'Land Reservatation'
             case _: token = x
 
         nid = str(res["nid"])
         cntry = res.get("Country", "No Country")
+
     except Exception as e:
+        # print ("exception", txt)
         ip = None
         nid = None
         cntry = None
@@ -222,6 +224,10 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type):
     # log_type = 'ERROR'
     error_categ = 'user'
     rec_lst = [log_timestamp, None, line_no, nid, log_type, cntry, ip, service, token, error_categ, None]
+    if service in ('confirmReservation', 'confirmLandReservation'):
+        rec_lst += list(res.get('details').values())
+    else:
+        rec_lst = rec_lst + ['' for i in range(9)]
     return rec_lst
 
 

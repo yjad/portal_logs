@@ -25,4 +25,4 @@ else:
     col1, col2 = st.columns(2)
     col1.download_button(label = 'Save to csv', data = stu.convert_df(log_stats), file_name = 'Log Summary Data.csv', mime = 'text/csv')
     res_data = df.loc[df.service.isin( ('confirmReservation', 'confirmLandReservation'))]
-    col2.download_button(label = 'Res. Data', data = stu.convert_df(res_data), file_name = f'Res. Data_{dt_from[0]}.csv', mime = 'text/csv')
+    col2.download_button(label = 'Res. Data', data = stu.convert_df(res_data), file_name = f'Res. Data_{selected_dates[0]}.csv', mime = 'text/csv')

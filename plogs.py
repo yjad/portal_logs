@@ -65,9 +65,12 @@ def yield_zip_file(file_path, file_type):
 # Process one zip file
 def zip_log_to_df(zip_file):
     out_error = open(nid_error_file, "wt", encoding='utf-8')
-    col = ["log_date","node","line_no", "NID", "log_type" , 
+    land_col = ["log_date","node","line_no", "NID", "log_type" , 
                     "country", "IP_address", "service", "token", "categ", "error_line",
-                    'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum']
+                    'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum', '', '']
+    unit_col = ["log_date","node","line_no", "NID", "log_type" , 
+                    "country", "IP_address", "service", "token", "categ", "error_line",
+                    'Gov','City','Region','District','Sub_District','Floor_No','building_no','Unit_No','Unit_Model', 'Unit_ID', 'checksum']
     # log_pd = pd.DataFrame(columns=col)
     log_pd = pd.DataFrame()
     log_lst = []
@@ -83,7 +86,7 @@ def zip_log_to_df(zip_file):
         file_type = os.path.splitext(zip_file.name)[1]
         # print (log_file.name)
 
-
+    project_type = None
     zfiles = yield_zip_file(zip_file, file_type)
     for f in zfiles:
         line_no = 0
@@ -94,7 +97,7 @@ def zip_log_to_df(zip_file):
             if not txt: break # end of file
             line_no += 1
 
-            # if line_no > 100000000: break
+            # if line_no > 10000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
             if line_no % 40000 == 0: print (line_no)
@@ -109,8 +112,9 @@ def zip_log_to_df(zip_file):
                 continue    # Invalid record format, ignore rest of parsing
             rec = None
             if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
-                rec = parse_nid_rec(txt, line_no, out_error, dt, log_type)
-                # pass
+                rec, rec_project_type = parse_nid_rec(txt, line_no, out_error, dt, log_type)
+                if not project_type and rec_project_type:   # set it once in the file
+                    project_type = rec_project_type 
             else:
                 if log_type in ('INFO ', 'WARN '): continue # skip info for tech errors
                 rec  = parse_tech_rec(txt, line_no, out_error, dt, log_type)
@@ -120,7 +124,10 @@ def zip_log_to_df(zip_file):
             log_lst.append(rec)  
 
     out_error.close()
-    log_pd = pd.DataFrame(log_lst, columns = col)
+    if project_type == 'confirmLandReservation':  
+        log_pd = pd.DataFrame(log_lst, columns = land_col)
+    else:
+        log_pd = pd.DataFrame(log_lst, columns = unit_col)
     return log_pd
 # --------------------
 # Not used any more
@@ -282,11 +289,13 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type):
     error_categ = 'user'
     rec_lst = [log_timestamp, None, line_no, nid, log_type, cntry, ip, service, token, error_categ, None]
     if service in ('confirmReservation', 'confirmLandReservation'):
+        project_type = service
         # print ("*****", res.get('details'))
         rec_lst += list(res.get('details').values())
     else:
-        rec_lst = rec_lst + ['' for i in range(9)]
-    return rec_lst
+        rec_lst = rec_lst + ['' for i in range(11)]
+        project_type = None
+    return rec_lst, project_type
 
 
 def parse_tech_rec(txt, line_no, out_error, dt, log_type):

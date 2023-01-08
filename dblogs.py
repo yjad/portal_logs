@@ -22,6 +22,10 @@ def zip_log_to_df(zip_file):
         # print (log_file.name)
 
     log_lst = []
+    # print (zip_file, file_type)
+    # with zipfile.ZipFile(zip_file, "r") as zf:
+        # for fname in zf.namelist():
+            # f = zf.open(fname) 
     zfiles = yield_rar_file(zip_file)
     for f in zfiles:
         line_no = 0
@@ -30,24 +34,26 @@ def zip_log_to_df(zip_file):
             if not txt: break # end of file
             line_no += 1
 
-            # if line_no > 2000: break
+            # if line_no > 100000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
-            if line_no % 1000 == 0: print (line_no)
+            if line_no % 10000 == 0: print (line_no)
             
             txt = txt.decode('utf-8')
             rec= parse_db_log_line(line_no, txt)
             log_lst.append(rec)  
 
-    col = ['line_no', 'tmstamp', 'n', 'query_type', 'cmd', 'proc_tbl', 'params', 'query']
-    log_pd = pd.DataFrame(log_lst, columns = col)
-    csv_fn= os.path.basename(zip_file).split('.')[0]
-    log_pd.to_csv(f'./out/dblog-{csv_fn}.csv', index=False )
+        col = ['line_no', 'timestamp', 'n', 'query_type', 'cmd', 'proc_tbl', 'params', 'query']
+        log_pd = pd.DataFrame(log_lst, columns = col)
+        print('Done ...')
+        return log_pd
+
 
 def parse_db_log_line(line_no, txt):
     txt = txt.replace('\n', '').replace ('\t', ' ')
     txt_lst = txt.split()
     txt_len = len(txt_lst)
+    # print (txt[:19])
     dt = datetime.strptime(txt[:19], '%Y-%m-%dT%H:%M:%S')
     try:
         n= int(txt_lst[1])      #int(txt[35:39])
@@ -118,12 +124,12 @@ def dblog_by_query_type(dblog_csv_fn, query_type):
     csv_fn= os.path.basename(dblog_csv_fn).split('.')[0]
     tbl.to_csv(f'./out/dblogByQueryType-{csv_fn}.csv', index=False )
 
-def dblog_by_cmd(dblog_csv_fn, cmd):
-    df = pd.read_csv(dblog_csv_fn, parse_dates=False)
+def dblog_by_cmd(df, cmd):
+    # df = pd.read_csv(dblog_csv_fn, parse_dates=False)
     
     tbl = df.loc[df.cmd.str.upper() == cmd.upper()]  
-    csv_fn= os.path.basename(dblog_csv_fn).split('.')[0]
-    tbl.to_csv(f'./out/dblogByCommand-{csv_fn}.csv', index=False )
+    return tbl
+
 
 def yield_rar_file(rar_filename):
 
@@ -131,7 +137,11 @@ def yield_rar_file(rar_filename):
     if type(rar_filename) == str:
         rar_files = RarFile(rar_filename)
     else:   # UploadedFile object
-        rar_files = RarFile(io.BytesIO(rar_filename.read()))
+        try:
+            rar_files = RarFile(io.BytesIO(rar_filename.read()))
+        except: # home PC does not find le32
+            LOG_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Projects\Realestate Reservation Portal\5- Operation\Incident reports\change land-no\DB logs"
+            rar_files = RarFile(os.path.join(LOG_DIR,rar_filename.name))
 
     for f in rar_files.infolist():
         print (f.filename)

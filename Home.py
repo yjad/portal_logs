@@ -1,5 +1,8 @@
 import streamlit as st
 import pandas as pd
+import base64
+import io
+import os
 
 # @st.experimental_memo(suppress_st_warning=True)
 def upload_csv_files(csv_files):
@@ -30,5 +33,20 @@ def display_data_dates(strt, end):
     else:
         txt = f'Data Loaded for {strt}'
     st.subheader(txt)
+
+def csv_download(df, index, file_name):
+    csv = df.to_csv(index=index)
+    b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
+    href = f'<a href="data:file/csv;base64,{b64}" download="{file_name}">Download CSV File</a>'
+    return href
+
+def excel_download(df, index, file_name):
+    file_name = file_name
+    towrite = io.BytesIO()
+    df.to_excel(towrite, index=index, header=True, sheet_name = os.path.splitext(file_name)[0][:31])
+    towrite.seek(0)  # reset pointer
+    b64 = base64.b64encode(towrite.read()).decode()  # some strings
+    href= f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{file_name}">Download excel file</a>'
+    return href
 
 

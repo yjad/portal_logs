@@ -43,14 +43,14 @@ def zip_log_to_df(zip_file):
             rec= parse_db_log_line(line_no, txt)
             log_lst.append(rec)  
 
-        col = ['line_no', 'timestamp', 'n', 'query_type', 'cmd', 'proc_tbl', 'params', 'query']
+        col = ['line_no', 'timestamp', 'n', 'query_type', 'cmd', 'proc_tbl', 'params', 'logLine']
         log_pd = pd.DataFrame(log_lst, columns = col)
         print('Done ...')
         return log_pd
 
 
-def parse_db_log_line(line_no, txt):
-    txt = txt.replace('\n', '').replace ('\t', ' ')
+def parse_db_log_line(line_no, log_line):
+    txt = log_line.replace('\n', '').replace ('\t', ' ')
     txt_lst = txt.split()
     txt_len = len(txt_lst)
     # print (txt[:19])
@@ -90,7 +90,7 @@ def parse_db_log_line(line_no, txt):
             # print (query)
             pass    #SELECT @com_mysql_jdbc_outparam_log_id
 
-    return [line_no, dt, n, query_type, cmd, proc_tbl, params, query]
+    return [line_no, dt, n, query_type, cmd, proc_tbl, params, log_line]
 
 
 def dblog_from_to(csv_fn, from_dttm,to_dttm):

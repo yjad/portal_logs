@@ -137,7 +137,7 @@ def proc_params():
         cmds.insert(0,'...')
         cmd = st.sidebar.selectbox("Select Command",cmds)
         if cmd != '...':
-            dfo = df.loc[df.proc_tbl == cmd, ['proc_tbl', 'params']]
+            dfo = df.loc[df.proc_tbl == cmd, ['proc_tbl', 'params', 'log_line']]
             nparams = len(dfo.iloc[0,1].split(','))
             params = pd.DataFrame()
             params['proc_tbl'] = dfo.proc_tbl

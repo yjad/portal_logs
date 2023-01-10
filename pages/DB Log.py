@@ -50,6 +50,7 @@ def summarize_db_log():
         with st.spinner("Please Wait ... "):
             df = dblogs.zip_log_to_df(uploaded_file)
             dts = df.timestamp.dt.date.unique()
+            st.write(dts)
             
             for dt in dts: # split multi-date log file into a seperate zip csv file for each day 
                 dt_str = str(dt)

@@ -5,7 +5,8 @@ import sys
 #from config import config
 MEETING_TABLE = "meetings"
 ATTENDEES_TABLE = "attendees"
-DB_FILE_NAME = r"C:\Yahia\Home\Yahia-Dev\Python\portal_logs\data\portal_logs.sqlite"
+# DB_FILE_NAME = r"C:\Yahia\Home\Yahia-Dev\Python\portal_logs\data\portal_logs.sqlite"
+DB_FILE_NAME = r"C:\Yahia\Home\Yahia-Dev\Python\portal_logs\data\rep_land.sqlite"
 # DB_FILE_NAME = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data\logs.sqlite"
 
 PRINT_INSERT_ERROR = True

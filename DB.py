@@ -1,12 +1,13 @@
 import sqlite3
 from time import time
 import sys
+import pandas as pd
 
 #from config import config
 MEETING_TABLE = "meetings"
 ATTENDEES_TABLE = "attendees"
-# DB_FILE_NAME = r"C:\Yahia\Home\Yahia-Dev\Python\portal_logs\data\portal_logs.sqlite"
-DB_FILE_NAME = r"C:\Yahia\Home\Yahia-Dev\Python\portal_logs\data\rep_land.sqlite"
+DB_FILE_NAME = r"C:\Yahia\Home\Yahia-Dev\Python\portal_logs\data\portal_logs.sqlite"
+# DB_FILE_NAME = r"C:\Yahia\Home\Yahia-Dev\Python\portal_logs\data\rep_land.sqlite"
 # DB_FILE_NAME = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data\logs.sqlite"
 
 PRINT_INSERT_ERROR = True
@@ -22,22 +23,22 @@ def open_db():
     
 
 
-def create_tables(cursor):
+# def create_tables(cursor):
     
-    cmd = f'CREATE TABLE IF NOT EXISTS logs' \
-          '(log_date TEXT,' \
-          'node TEXT,' \
-          'line_no INTEGER ,' \
-          'NID TEXT ,' \
-          'log_type INTEGER,' \
-          'country	TEXT,' \
-          'IP_address TEXT,' \
-          'service TEXT,' \
-          'error_categ TEXT,'\
-          'error_line TEXT)'
-    cursor.execute(cmd)
+#     cmd = f'CREATE TABLE IF NOT EXISTS logs' \
+#           '(log_date TEXT,' \
+#           'node TEXT,' \
+#           'line_no INTEGER ,' \
+#           'NID TEXT ,' \
+#           'log_type INTEGER,' \
+#           'country	TEXT,' \
+#           'IP_address TEXT,' \
+#           'service TEXT,' \
+#           'error_categ TEXT,'\
+#           'error_line TEXT)'
+#     cursor.execute(cmd)
 
-    return
+#     return
 
 
 def close_db(cursor):
@@ -105,3 +106,18 @@ def query_to_list(cmd, return_header = True):
     else:
         close_db(cursor)
         return rows
+
+def query_to_pd(cmd, table:bool=None): 
+    
+    conn, _ = open_db()
+    if table == None:
+        if len(cmd.split()) == 1: # # if one word, its table, else cmd is a query
+            table = True
+        else:
+            table = False
+    if table:
+        df = pd.read_sql(f"SELECT * FROM {cmd}", conn)
+    else:
+        df = pd.read_sql(cmd, conn)
+    conn.close()
+    return df

@@ -34,19 +34,18 @@ def display_data_dates(strt, end):
         txt = f'Data Loaded for {strt}'
     st.subheader(txt)
 
-def csv_download(df, index, file_name):
+def csv_download(df, index, file_name, link_display_title = 'Download CSV File'):
     csv = df.to_csv(index=index)
     b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
-    href = f'<a href="data:file/csv;base64,{b64}" download="{file_name}">Download CSV File</a>'
+    href = f'<a href="data:file/csv;base64,{b64}" download="{file_name}">{link_display_title}</a>'
     return href
 
-def excel_download(df, index, file_name):
+def excel_download(df, index, file_name, link_display_title = 'Download excel file'):
     file_name = file_name
     towrite = io.BytesIO()
     df.to_excel(towrite, index=index, header=True, sheet_name = os.path.splitext(file_name)[0][:31])
     towrite.seek(0)  # reset pointer
     b64 = base64.b64encode(towrite.read()).decode()  # some strings
-    href= f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{file_name}">Download excel file</a>'
+    href= f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{file_name}">{link_display_title}</a>'
     return href
-
 

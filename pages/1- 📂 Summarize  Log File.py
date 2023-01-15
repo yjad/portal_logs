@@ -8,7 +8,15 @@ def summarize_log_file():
     if st.button('Process ...') and uploaded_files:
         with st.spinner("Please Wait ... "):
             logs.summerize_portal_logs(uploaded_files, load_db=False)
-    st.success("File extraced ...")
+        st.success("File extraced ...")
+
+def Summarize_big_file():
+    filename = st.text_input(label = "Enter file path:")
+    if st.button('Process ...'):
+        with st.spinner("Please Wait ... "):
+            logs.summerize_portal_logs(filename, load_db=False)
+        st.success("File extraced ...")
+
 
 def summarize_log_exceptions_file():
     uploaded_files= st.file_uploader('Select Log file',type=["log"], accept_multiple_files = False)
@@ -17,10 +25,14 @@ def summarize_log_exceptions_file():
             logs.summerize_exception_file(uploaded_files)
     st.success("File extraced ...")
 
+def load_db_project_table():
+    pass
 
 options={'...':None, 
-            'Summarize log file': summarize_log_file,
-            'Summarize log exception file': summarize_log_exceptions_file,
+            '1- Summarize log file': summarize_log_file,
+            '2- Summarize big-size log file (> 200GB)': Summarize_big_file,
+            '3- Summarize log exception file': summarize_log_exceptions_file,
+            "4- Load Portal Projects' Data": load_db_project_table() 
         }
 
 opt = st.sidebar.selectbox("Options",options.keys())

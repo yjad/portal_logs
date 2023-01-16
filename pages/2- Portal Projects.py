@@ -7,13 +7,12 @@ import pandas as pd
 
 def portal_projects():
     df = db.query_to_pd('project')
-    df.set_index('project_id', drop=True, inplace=True)
+    df = df.set_index('project_id', drop=True).sort_values('project_id', ascending=False)
     st.dataframe(df)
 
 
 def mismatch_checksum_lands():
     st.header("Mismatched Checksum")
-    sammary = st.checkbox('Summary?')
     sql = """
 SELECT org.*, ovr.land_id 'ovr_land_id', ovr.land_application_date 'ovr_land_application_date', ovr.applicant_national_id 'ovr_national_id' , ovr.available_lands 'ovr.available_lands'  
 FROM 

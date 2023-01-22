@@ -3,6 +3,7 @@ import plogs as logs
 
 
 
+
 def summarize_log_file():
     uploaded_files= st.file_uploader('Select Log file',type=["zip", 'gz'], accept_multiple_files = False)
     if st.button('Process ...') and uploaded_files:
@@ -26,7 +27,11 @@ def summarize_log_exceptions_file():
     st.success("File extraced ...")
 
 def load_db_project_table():
-    pass
+    uploaded_file= st.file_uploader('Select project file',type=["csv"], accept_multiple_files = False)
+    if st.button('Process ...') and uploaded_file:
+        with st.spinner("Please Wait ... "):
+            logs.load_project_table(uploaded_file)
+    st.success("File extraced ...")
 
 options={'...':None, 
             '1- Summarize log file': summarize_log_file,

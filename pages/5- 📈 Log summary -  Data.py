@@ -27,9 +27,12 @@ else:
     if col2.button(label = 'Save ResData'):
         res_data = df.loc[df.service.isin( ('confirmReservation', 'confirmLandReservation'))]
         if res_data.size > 0:
-            dt = df.dt.unique()[0]
-            proj_date = f"{dt[8:]}-{dt[5:7]}-{dt[2:4]}"
+            # ("df.dt.unique()", df.dt.unique())
+            proj_date = df.dt.unique()[0]
+            # proj_date = f"{dt[8:]}-{dt[5:7]}-{dt[2:4]}"
+            # ('proj_date', proj_date)
             project = db.query_to_list(f"SELECT project_id, project_type_id FROM project WHERE start_date = '{proj_date}'", return_header=False)
+            # project           
             if len(project) > 0:
                 project_id = project[0][0] 
                 project_type = project[0][1]

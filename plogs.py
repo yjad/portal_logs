@@ -97,7 +97,7 @@ def zip_log_to_df(zip_file):
             if not txt: break # end of file
             line_no += 1
 
-            # if line_no > 10000: break
+            if line_no > 1000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
             if line_no % 40000 == 0: print (line_no)
@@ -116,7 +116,12 @@ def zip_log_to_df(zip_file):
                 if not project_type and rec_project_type:   # set it once in the file
                     project_type = rec_project_type 
             else:
-                if log_type in ('INFO ', 'WARN '): continue # skip info for tech errors
+                if log_type in ('INFO ', 'WARN '): 
+                    print (txt[107:119], txt[120:])    # == 'Project ID: ')
+                    if (txt[107:119] == 'Project ID: '): 
+                        project_id = int(txt[120:])
+                    else:
+                        continue # skip info for tech errors
                 rec  = parse_tech_rec(txt, line_no, out_error, dt, log_type)
 
             if not rec: continue    # invalid line, skip it
@@ -521,4 +526,9 @@ def update_summary_db(df):
     return df_pivot
     pass
 
+def load_project_table(uploaded_file):
+    df = pd.read_csv(uploaded_file)
+    conn, _ = db.open_db()
+    df.to_sql('project', conn, if_exists='replace')
+    conn.close()
 

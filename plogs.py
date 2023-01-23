@@ -66,14 +66,13 @@ def yield_zip_file(file_path, file_type):
 def zip_log_to_df(zip_file):
     out_error = open(nid_error_file, "wt", encoding='utf-8')
     land_col = ["log_date","node","line_no", "NID", "log_type" , 
-                    "country", "IP_address", "service", "token", "categ", "error_line",
+                    "country", "IP_address", "service", "token", "categ",  'task_id', 'project_id',"error_line",
                     'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum', '', '']
     unit_col = ["log_date","node","line_no", "NID", "log_type" , 
-                    "country", "IP_address", "service", "token", "categ", "error_line",
+                    "country", "IP_address", "service", "token", "categ",'project_id', 'task_id',  "error_line",
                     'Gov','City','Region','District','Sub_District','Floor_No','building_no','Unit_No','Unit_Model', 'Unit_ID', 'checksum']
     # log_pd = pd.DataFrame(columns=col)
-    log_pd = pd.DataFrame()
-    log_lst = []
+    
     if type(zip_file) == str :
         file_type = 'file'
         if os.path.isdir(zip_file):
@@ -86,6 +85,9 @@ def zip_log_to_df(zip_file):
         file_type = os.path.splitext(zip_file.name)[1]
         # print (log_file.name)
 
+    log_pd = pd.DataFrame()
+    log_lst = []
+    proj_id_lst = []
     project_type = None
     zfiles = yield_zip_file(zip_file, file_type)
     for f in zfiles:
@@ -97,7 +99,7 @@ def zip_log_to_df(zip_file):
             if not txt: break # end of file
             line_no += 1
 
-            if line_no > 1000: break
+            # if line_no > 50000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
             if line_no % 40000 == 0: print (line_no)
@@ -112,18 +114,19 @@ def zip_log_to_df(zip_file):
                 continue    # Invalid record format, ignore rest of parsing
             rec = None
             if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
-                rec, rec_project_type = parse_nid_rec(txt, line_no, out_error, dt, log_type)
+                task_id = int(txt[99:103]) # task_id
+                project_id = None
+                rec, rec_project_type = parse_nid_rec(txt, line_no, out_error, dt, log_type, project_id, task_id)
                 if not project_type and rec_project_type:   # set it once in the file
                     project_type = rec_project_type 
+                    
             else:
                 if log_type in ('INFO ', 'WARN '): 
-                    print (txt[107:119], txt[120:])    # == 'Project ID: ')
-                    if (txt[107:119] == 'Project ID: '): 
-                        project_id = int(txt[120:])
-                    else:
-                        continue # skip info for tech errors
+                    if log_type == 'INFO ' and txt[106:118] == 'Project ID: ': 
+                        proj_id_lst.append([line_no, int(txt[118:]), int(txt[100:104])]) # project_id & task_id
+                    continue # skip info for tech errors, keep only lines for project-id
+                
                 rec  = parse_tech_rec(txt, line_no, out_error, dt, log_type)
-
             if not rec: continue    # invalid line, skip it
             # print ('------------', rec)
             log_lst.append(rec)  
@@ -133,6 +136,9 @@ def zip_log_to_df(zip_file):
         log_pd = pd.DataFrame(log_lst, columns = land_col)
     else:
         log_pd = pd.DataFrame(log_lst, columns = unit_col)
+
+    # log_pd.to_csv('./out/log_pd.csv', index=False)
+    # pd.DataFrame(proj_id_lst, columns=['line_no', 'project_id', 'task_id']).to_csv('./out/proj_id_lst.csv')
     return log_pd
 # --------------------
 # Not used any more
@@ -245,7 +251,7 @@ def summerize_exception_file(uploaded_file):
 def data_cleansing(txt):
     return txt.replace ('""', '"')  # replace double quote in text to a single
 
-def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type):
+def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type, project_id, task_id):
     global Exception_File
 
     txt = data_cleansing(txt)
@@ -292,7 +298,7 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type):
 
     # log_type = 'ERROR'
     error_categ = 'user'
-    rec_lst = [log_timestamp, None, line_no, nid, log_type, cntry, ip, service, token, error_categ, None]
+    rec_lst = [log_timestamp, None, line_no, nid, log_type, cntry, ip, service, token, error_categ, project_id, task_id, None]
     if service in ('confirmReservation', 'confirmLandReservation'):
         project_type = service
         # print ("*****", res.get('details'))
@@ -309,9 +315,14 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
 
     # log_type = 'ERROR'
     if len(txt) < 90:   # empty error
-        rec_lst = [dt, None, line_no, None, log_type, None, None, None, 'Empty Error', 'tech' , None]
+        rec_lst = [dt, None, line_no, None, log_type, None, None, None, 'Empty Error', 'tech' , 0, 0, None] 
         return rec_lst
 
+    project_id = 0 
+    try:
+        task_id = int(txt[99:102])
+    except:
+        task_id = None
     classified= False
     for token in search_tokens.itertuples():
         if txt.find(token.token) != -1: # found
@@ -331,7 +342,7 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
         error_token = "Unclassified"
         error_categ = 'Unclassified'
 
-    rec_lst = [dt, None, line_no, None, log_type, None, None, None, error_token, error_categ, txt]
+    rec_lst = [dt, None, line_no, None, log_type, None, None, None, error_token, error_categ,  project_id, task_id, txt]    
 
     return rec_lst
 

@@ -31,13 +31,13 @@ def load_db_project_table():
     if st.button('Process ...') and uploaded_file:
         with st.spinner("Please Wait ... "):
             logs.load_project_table(uploaded_file)
-    st.success("File extraced ...")
+    st.success("File Loaded ...")
 
-options={'...':None, 
+options={   '...':None, 
             '1- Summarize log file': summarize_log_file,
             '2- Summarize big-size log file (> 200GB)': Summarize_big_file,
             '3- Summarize log exception file': summarize_log_exceptions_file,
-            "4- Load Portal Projects' Data": load_db_project_table() 
+            "4- Load Portal Projects' Data": load_db_project_table 
         }
 
 opt = st.sidebar.selectbox("Options",options.keys())

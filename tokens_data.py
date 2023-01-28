@@ -1,6 +1,8 @@
 import pandas as pd
 Tokens = pd.DataFrame(columns = ['token','categ','prio','desc'], 
 data=[
+['ERROR [eg.intercom.hdb.rer.web.controllers.advice.ControllerExceptionHandler]', 'tech', 100, 'Exception'],
+['ControllerExceptionHandler','tech',9,'ControllerExceptionHandler'],
 ['userLocked','user',0,None],
 ['MailSendException','user',1,'Email quota exception'],
 ['UserNotFound','user',2,None],

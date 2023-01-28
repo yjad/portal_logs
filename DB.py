@@ -4,8 +4,8 @@ import sys
 import pandas as pd
 
 #from config import config
-MEETING_TABLE = "meetings"
-ATTENDEES_TABLE = "attendees"
+# MEETING_TABLE = "meetings"
+# ATTENDEES_TABLE = "attendees"
 DB_FILE_NAME = r".\data\portal_logs.sqlite"
 # DB_FILE_NAME = r"C:\Yahia\Home\Yahia-Dev\Python\portal_logs\data\rep_land.sqlite"
 # DB_FILE_NAME = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\data\logs.sqlite"
@@ -23,30 +23,18 @@ def open_db():
     
 
 
-# def create_tables(cursor):
-    
-#     cmd = f'CREATE TABLE IF NOT EXISTS logs' \
-#           '(log_date TEXT,' \
-#           'node TEXT,' \
-#           'line_no INTEGER ,' \
-#           'NID TEXT ,' \
-#           'log_type INTEGER,' \
-#           'country	TEXT,' \
-#           'IP_address TEXT,' \
-#           'service TEXT,' \
-#           'error_categ TEXT,'\
-#           'error_line TEXT)'
-#     cursor.execute(cmd)
-
-#     return
-
 
 def close_db(cursor):
     cursor.close()
 
 def exec_cmd(cursor, cmd):
-    cursor.execute(cmd)
-
+    if cursor:
+        cursor.execute(cmd)
+    else:       # if cursor is None, open DB, exec cmd, commit and then close.
+        conn, cursor = open_db()
+        cursor.execute(cmd)
+        conn.commit()
+        cursor.close()
 
 def insert_row(conn, cursor, table_name, rec):
 
@@ -121,3 +109,9 @@ def query_to_pd(cmd, table:bool=None):
         df = pd.read_sql(cmd, conn)
     conn.close()
     return df
+
+
+def df_to_sql(df, table, if_exists): 
+    conn, _ = open_db()
+    df.to_sql(table, if_exists=if_exists, con=conn)
+    conn.close()

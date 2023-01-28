@@ -333,6 +333,15 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
             else:
                 error_token = token.desc
             error_categ = token.categ
+            if token.desc == 'Exception':   #Exception, to be abalyzied
+                lst = txt[122:].rstrip().split(': ')
+                if len(lst) == 1:
+                    excption_type = lst[0]
+                    excption_desc = ''
+                else:
+                    excption_type = lst[1]
+                    excption_desc = lst[2]
+
             txt= None   # error text is not needed in this case
             classified = True
             break    

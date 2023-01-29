@@ -1,8 +1,7 @@
 import pandas as pd
 Tokens = pd.DataFrame(columns = ['token','categ','prio','desc'], 
 data=[
-['ERROR [eg.intercom.hdb.rer.web.controllers.advice.ControllerExceptionHandler]', 'tech', 100, 'Exception'],
-['ControllerExceptionHandler','tech',9,'ControllerExceptionHandler'],
+# ['ControllerExceptionHandler','tech',9,'ControllerExceptionHandler'],
 ['userLocked','user',0,None],
 ['MailSendException','user',1,'Email quota exception'],
 ['UserNotFound','user',2,None],
@@ -10,8 +9,8 @@ data=[
 ['changeUserPassword','user',4,None],
 ['ResourceAccessException','user',4,'sending SMS'],
 ['AuthenticationFailedException','user',4,'Too many login attempts'],
-['HttpRequestMethodNotSupportedException','tech',4,'HRMNSE'],
-['TemplateInputException','tech',5,'TIE'],
+['HttpRequestMethodNotSupportedException','tech',4,None],
+['TemplateInputException','tech',5,None],
 ['IllegalStateException','tech',6,'ISE'],
 ['[stderr], (default task-,tech',7,'stderr'],
 ['Exception processing template','tech',8,'EPT'],

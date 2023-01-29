@@ -122,8 +122,8 @@ def zip_log_to_df(zip_file):
                     
             else:
                 if log_type in ('INFO ', 'WARN '): 
-                    if log_type == 'INFO ' and txt[106:118] == 'Project ID: ': 
-                        proj_id_lst.append([line_no, int(txt[118:]), int(txt[100:104])]) # project_id & task_id
+                    # if log_type == 'INFO ' and txt[106:118] == 'Project ID: ': 
+                        # proj_id_lst.append([line_no, int(txt[118:]), int(txt[100:104])]) # project_id & task_id
                     continue # skip info for tech errors, keep only lines for project-id
                 
                 rec  = parse_tech_rec(txt, line_no, out_error, dt, log_type)
@@ -324,34 +324,50 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
     except:
         task_id = None
     classified= False
-    for token in search_tokens.itertuples():
-        if txt.find(token.token) != -1: # found
-            # print (token, "------->", token) 
-            # error_token = token.token
-            if pd.isnull(token.desc):
-                error_token = token.token
+    #----------
+    if txt[30:101] == "[eg.intercom.hdb.rer.web.controllers.advice.ControllerExceptionHandler]":
+        lst = txt[122:].rstrip().split(': ')
+        l = len(lst)
+        service = 'Exception'
+        classified = True
+        error_categ = 'tech'
+        
+        try:
+            if l ==1:
+                error_token = lst[0].lstrip()
+                error_line = ''
+            elif l == 2:
+                error_token = lst[1]
+                error_line = ''
             else:
-                error_token = token.desc
-            error_categ = token.categ
-            if token.desc == 'Exception':   #Exception, to be abalyzied
-                lst = txt[122:].rstrip().split(': ')
-                if len(lst) == 1:
-                    excption_type = lst[0]
-                    excption_desc = ''
+                error_token = lst[1]
+                error_line = lst[2]
+            txt= error_line   # error text is not needed in this case
+        except:
+            print (f"Unhandled log exception line: {line_no}: {txt}" )
+    #----------
+    else:
+        service = None
+        for token in search_tokens.itertuples():
+            if txt.find(token.token) != -1: # found
+                # print (token, "------->", token) 
+                # error_token = token.token
+                if pd.isnull(token.desc):
+                    error_token = token.token
                 else:
-                    excption_type = lst[1]
-                    excption_desc = lst[2]
+                    error_token = token.desc
+                error_categ = token.categ
 
-            txt= None   # error text is not needed in this case
-            classified = True
-            break    
+                txt= None   # error text is not needed in this case
+                classified = True
+                break    
 
-    if not classified: #categ not found
-        out_error.write(f"Unclassified Error. Line no:{line_no}: "+txt)
-        error_token = "Unclassified"
-        error_categ = 'Unclassified'
+        if not classified: #categ not found
+            out_error.write(f"Unclassified Error. Line no:{line_no}: "+txt)
+            error_token = "Unclassified"
+            error_categ = 'Unclassified'
 
-    rec_lst = [dt, None, line_no, None, log_type, None, None, None, error_token, error_categ,  project_id, task_id, txt]    
+    rec_lst = [dt, None, line_no, None, log_type, None, None, service, error_token, error_categ,  project_id, task_id, txt]    
 
     return rec_lst
 

@@ -324,50 +324,27 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
     except:
         task_id = None
     classified= False
-    #----------
-    if txt[30:101] == "[eg.intercom.hdb.rer.web.controllers.advice.ControllerExceptionHandler]":
-        lst = txt[122:].rstrip().split(': ')
-        l = len(lst)
-        service = 'Exception'
-        classified = True
-        error_categ = 'tech'
-        
-        try:
-            if l ==1:
-                error_token = lst[0].lstrip()
-                error_line = ''
-            elif l == 2:
-                error_token = lst[1]
-                error_line = ''
+    
+    for token in search_tokens.itertuples():
+        if txt.find(token.token) != -1: # found
+            # print (token, "------->", token) 
+            # error_token = token.token
+            if pd.isnull(token.desc):
+                error_token = token.token
             else:
-                error_token = lst[1]
-                error_line = lst[2]
-            txt= error_line   # error text is not needed in this case
-        except:
-            print (f"Unhandled log exception line: {line_no}: {txt}" )
-    #----------
-    else:
-        service = None
-        for token in search_tokens.itertuples():
-            if txt.find(token.token) != -1: # found
-                # print (token, "------->", token) 
-                # error_token = token.token
-                if pd.isnull(token.desc):
-                    error_token = token.token
-                else:
-                    error_token = token.desc
-                error_categ = token.categ
+                error_token = token.desc
+            error_categ = token.categ
 
-                txt= None   # error text is not needed in this case
-                classified = True
-                break    
+            txt= None   # error text is not needed in this case
+            classified = True
+            break    
 
-        if not classified: #categ not found
-            out_error.write(f"Unclassified Error. Line no:{line_no}: "+txt)
-            error_token = "Unclassified"
-            error_categ = 'Unclassified'
+    if not classified: #categ not found
+        out_error.write(f"Unclassified Error. Line no:{line_no}: "+txt)
+        error_token = "Unclassified"
+        error_categ = 'Unclassified'
 
-    rec_lst = [dt, None, line_no, None, log_type, None, None, service, error_token, error_categ,  project_id, task_id, txt]    
+    rec_lst = [dt, None, line_no, None, log_type, None, None, None, error_token, error_categ,  project_id, task_id, txt]    
 
     return rec_lst
 

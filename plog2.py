@@ -1,11 +1,10 @@
 import pandas as pd
 
-Tokens = pd.DataFrame(columns = ['token','categ','prio','desc', 'func'], 
+Tokens = pd.DataFrame(columns = ['token','categ','prio','service', 'func'], 
 data=[
 ['ERROR [eg.intercom.hdb.rer.web.controllers.advice.ControllerExceptionHandler]', 'tech', 0, 'Exception', 'error_exception_handler'],
 ['ERROR [org.thymeleaf.TemplateEngine]', 'tech', 1, 'thymeleaf', 'thymeleaf_log_handler'],
 ['ERROR [io.undertow.request]', 'tech', 1, 'TemplateInputException', 'undertow_log_handler'],
-# ['ERROR [eg.intercom.hdb.rer.web.config.WebRequestInterceptor]', 'user', 1, 'NID data', 'WebRequestInterceptor'],
 ['ERROR [eg.intercom.hdb.rer.web.config.security.CustomUsernamePasswordAuthenticationFilter]', 'user', 1, 'Authentication', 'authetication_error_handler'],
 ])
 
@@ -47,10 +46,16 @@ def thymeleaf_log_handler(txt):
     #     log_desc_type = ''
     # pass
 
+
 def parse_tech_rec(txt, line_no, out_error, dt, log_type):
 # def parse_tech_log_line(line_no, txt):
     project_id = None
     task_id = None
+    found = False
+    ipaddress = None
+    service = 'Unclassified'
+    error_token = None
+    error_categ = None
     for token in Tokens.itertuples():
         p = txt.find(token.token) 
         if p != -1 :  # found
@@ -62,25 +67,33 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
                     case 'error_exception_handler':
                         log_desc_type, log_desc = error_exception_handler(line_no, txt[p+l:])
                         # return token.token, log_desc_type, log_desc
-                    case 'thymeleaf_log_handler':
-                        return token.token, token.desc, ''
-                    case 'undertow_log_handler':
-                        return token.token, token.desc, ''
-                    case 'WebRequestInterceptor':
-                        return token.token, token.desc, ''
-                    case 'authetication_error_handler':
-                        return token.token, token.desc, ''
-            else:    
+                        service = token.service
+                        ipaddress = log_desc_type
+                        error_token = token.token
+                        txt = log_desc
+
+                    case ('thymeleaf_log_handler', 
+                            'undertow_log_handler', 
+                            'authetication_error_handler'):
+                        service = token.service
+                        ipaddress = 'log_desc_type'
+                        error_token = token.token
+                        txt = 'log_desc'
+
+            else:    # token found with no token.func
                 if pd.isnull(token.desc):
                     error_token = token.token
                 else:
                     error_token = token.desc
                 error_categ = token.categ
+            found = True
+            break    
+    if not found:
+        
+        
+        
 
-        # txt= None   # error text is not needed in this case
-        classified = True
-        break    
-    rec_lst = [dt, None, line_no, None, log_type, None, None, service, error_token, error_categ,  project_id, task_id, txt]    
+    rec_lst = [dt, None, line_no, None, log_type, None, ipaddress, service, error_token, error_categ,  project_id, task_id, txt]    
     # return 'Unclassified', txt, None
     return rec_lst
 

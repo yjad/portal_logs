@@ -6,6 +6,7 @@ from sqlite3 import SQLITE_CREATE_INDEX
 import numpy as np
 import zipfile, tarfile
 from csv import QUOTE_ALL
+import plog2
 
 
 # from tzlocal import get_localzone_name
@@ -99,7 +100,7 @@ def zip_log_to_df(zip_file):
             if not txt: break # end of file
             line_no += 1
 
-            # if line_no > 50000: break
+            if line_no > 50000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
             if line_no % 40000 == 0: print (line_no)
@@ -126,7 +127,7 @@ def zip_log_to_df(zip_file):
                         # proj_id_lst.append([line_no, int(txt[118:]), int(txt[100:104])]) # project_id & task_id
                     continue # skip info for tech errors, keep only lines for project-id
                 
-                rec  = parse_tech_rec(txt, line_no, out_error, dt, log_type)
+                rec  = plog2.parse_tech_rec(txt, line_no, out_error, dt, log_type)
             if not rec: continue    # invalid line, skip it
             # print ('------------', rec)
             log_lst.append(rec)  

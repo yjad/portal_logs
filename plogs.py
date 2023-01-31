@@ -100,7 +100,7 @@ def zip_log_to_df(zip_file):
             if not txt: break # end of file
             line_no += 1
 
-            if line_no > 50000: break
+            if line_no > 5000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
             if line_no % 40000 == 0: print (line_no)

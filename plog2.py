@@ -30,67 +30,66 @@ def error_exception_handler(line_no, txt):
     return exception_type, exception_desc
     
 
-def thymeleaf_log_handler(txt):
-    return 0, 0
-    # x=0
-    # log_type = txt[30:x+1] # skip (default task-9999)
-    # log_desc = txt[x+22:].lstrip()
-    # if log_type == '[org.thymeleaf.TemplateEngine]': 
-    #     log_desc = log_desc[31:].lstrip()    # skip task-id in [THYMELEAF][default task-10430]
-    # x = log_desc.find('org.springframework.')
-    # if x != -1: # found
-    #     y = log_desc[x:].find(':')
-    #     log_desc_type = log_desc[x:x+y].split('.')[-1]
-    #     print (y, log_desc[x:x+y+1], "***", log_desc_type)
-    # else:
-    #     log_desc_type = ''
-    # pass
-
+def thymeleaf_log_handler(line_no, txt):
+    #(default task-11398) [THYMELEAF][default task-11398] Exception processing template "index": An error happened during template parsing (template: "ServletContext resource [/WEB-INF/views/index.html]"): org.thymeleaf.exceptions.TemplateInputException: An error happened during template parsing (template: "ServletContext resource [/WEB-INF/views/index.html]")
+    x=0
+    p = txt[52:].find(': ') # skip (default task-11398) [THYMELEAF][default task-11398]
+   
+    exception_type = txt[52:p+2] 
+    exception_desc = ''
+    # print (exception_type)
+    
+    return exception_type, exception_desc
+    
 
 def parse_tech_rec(txt, line_no, out_error, dt, log_type):
 # def parse_tech_log_line(line_no, txt):
     project_id = None
     task_id = None
     found = False
-    ipaddress = None
-    service = 'Unclassified'
-    error_token = None
-    error_categ = None
+    
     for token in Tokens.itertuples():
         p = txt.find(token.token) 
         if p != -1 :  # found
+            found = True
             # print (token, "------->", token) 
             # error_token = token.token
             if token.func:
                 l = len(token.token)
                 match (token.func):
                     case 'error_exception_handler':
-                        log_desc_type, log_desc = error_exception_handler(line_no, txt[p+l:])
+                        ipaddress, txt = error_exception_handler(line_no, txt[p+l:])
                         # return token.token, log_desc_type, log_desc
                         service = token.service
-                        ipaddress = log_desc_type
                         error_token = token.token
-                        txt = log_desc
+                        error_categ = token.categ
 
-                    case ('thymeleaf_log_handler', 
-                            'undertow_log_handler', 
-                            'authetication_error_handler'):
+                    case 'thymeleaf_log_handler' | 'undertow_log_handler' | 'authetication_error_handler':
+                        ipaddress, txt = thymeleaf_log_handler(line_no, txt[p+l:])
                         service = token.service
-                        ipaddress = 'log_desc_type'
                         error_token = token.token
-                        txt = 'log_desc'
-
+                        error_categ = token.categ
+                    case _:
+                        print ('Unhandled exception function:', token.func)
             else:    # token found with no token.func
-                if pd.isnull(token.desc):
-                    error_token = token.token
-                else:
-                    error_token = token.desc
-                error_categ = token.categ
-            found = True
-            break    
+                print (txt)
+                found = True
+                ipaddress = None
+                service = None
+            #    pass
+            if pd.isnull(token.service):
+                error_token = token.token
+            else:
+                error_token = token.service
+            error_categ = token.categ
+           
+            break    # exit with the first found token
     if not found:
-        
-        
+        ipaddress = None
+        service = 'Unclassified'
+        error_token = None
+        error_categ = None
+        txt = txt[30:]      # to be analyzed
         
 
     rec_lst = [dt, None, line_no, None, log_type, None, ipaddress, service, error_token, error_categ,  project_id, task_id, txt]    

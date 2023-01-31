@@ -30,22 +30,15 @@ def error_exception_handler(line_no, txt):
     return exception_type, exception_desc
     
 
-def thymeleaf_log_handler(txt):
-    return 0, 0
-    # x=0
-    # log_type = txt[30:x+1] # skip (default task-9999)
-    # log_desc = txt[x+22:].lstrip()
-    # if log_type == '[org.thymeleaf.TemplateEngine]': 
-    #     log_desc = log_desc[31:].lstrip()    # skip task-id in [THYMELEAF][default task-10430]
-    # x = log_desc.find('org.springframework.')
-    # if x != -1: # found
-    #     y = log_desc[x:].find(':')
-    #     log_desc_type = log_desc[x:x+y].split('.')[-1]
-    #     print (y, log_desc[x:x+y+1], "***", log_desc_type)
-    # else:
-    #     log_desc_type = ''
-    # pass
-
+def thymeleaf_log_handler(line_no, txt):
+    #(default task-11398) [THYMELEAF][default task-11398] Exception processing template "index": An error happened during template parsing (template: "ServletContext resource [/WEB-INF/views/index.html]"): org.thymeleaf.exceptions.TemplateInputException: An error happened during template parsing (template: "ServletContext resource [/WEB-INF/views/index.html]")
+    x=0
+    p = txt[53:].find(':')
+    exception_type = txt[53:p-1] 
+    exception_desc = ''
+    
+    return exception_type, exception_desc
+    
 
 def parse_tech_rec(txt, line_no, out_error, dt, log_type):
 # def parse_tech_log_line(line_no, txt):
@@ -70,15 +63,18 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
                         service = token.service
                         ipaddress = log_desc_type
                         error_token = token.token
+                        error_categ = token.categ
                         txt = log_desc
 
                     case ('thymeleaf_log_handler', 
                             'undertow_log_handler', 
                             'authetication_error_handler'):
+                        log_desc_type, log_desc = thymeleaf_log_handler(line_no, txt[p+l:])
                         service = token.service
-                        ipaddress = 'log_desc_type'
+                        ipaddress = log_desc_type
                         error_token = token.token
-                        txt = 'log_desc'
+                        error_categ = token.categ
+                        txt = log_desc
 
             else:    # token found with no token.func
                 if pd.isnull(token.desc):
@@ -88,9 +84,7 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
                 error_categ = token.categ
             found = True
             break    
-    if not found:
-        
-        
+    # if not found:
         
 
     rec_lst = [dt, None, line_no, None, log_type, None, ipaddress, service, error_token, error_categ,  project_id, task_id, txt]    

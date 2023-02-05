@@ -100,7 +100,7 @@ def zip_log_to_df(zip_file):
             if not txt: break # end of file
             line_no += 1
 
-            if line_no > 5000: break
+            # if line_no > 5000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
             if line_no % 40000 == 0: print (line_no)
@@ -117,10 +117,11 @@ def zip_log_to_df(zip_file):
             if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
                 task_id = int(txt[99:103]) # task_id
                 project_id = None
+                # ----------- Debug tech rec only -----
                 rec, rec_project_type = parse_nid_rec(txt, line_no, out_error, dt, log_type, project_id, task_id)
                 if not project_type and rec_project_type:   # set it once in the file
                     project_type = rec_project_type 
-                    
+                #--------------
             else:
                 if log_type in ('INFO ', 'WARN '): 
                     # if log_type == 'INFO ' and txt[106:118] == 'Project ID: ': 
@@ -373,7 +374,8 @@ def summerize_portal_logs(fpath, load_db=False):
        
         df = log_df.loc[log_df.dt == d]
         df.to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"log summary-{d}.csv"})
-        update_summary_db(df)
+        # df.to_csv('./out/xx.csv', index=False)
+        # update_summary_db(df)
 
 def display_login_cntry(df, selected_dts):
     global Cntry

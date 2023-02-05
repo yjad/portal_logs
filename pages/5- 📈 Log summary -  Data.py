@@ -82,14 +82,23 @@ def log_summary_all():
 
 def tech_log():
     csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = False)
-    df, dt_from, dt_to, dts = stu.upload_csv_files(csv_files)
+    df = pd.read_csv(csv_files, compression='zip', low_memory=False)
+    # df, dt_from, dt_to, dts = stu.upload_csv_files(csv_files)
 
-    if not dt_from: 
+    if df.size == 0: 
         st.info('#### No data to display')
         return
+    # df.columns
     df.error_line.fillna(' ', inplace = True)
-    tech_log_stats = df.loc[df.categ == 'tech'].pivot_table(index= ['service', 'error_line'], values = 'line_no', columns = 'token', aggfunc='count', fill_value=0)
-    st.dataframe(tech_log_stats)
+    # df1 = df.loc[df.categ == 'tech'].pivot_table(index= ['service', 'error_line'], values = 'line_no', columns = 'token', aggfunc='count', fill_value=0)#.to_csv('./out/xxx.csv', index = True)
+    # df1 = df.loc[df.categ == 'tech']
+    df1 = df[df.categ == 'tech'][['service',  'token']].groupby('token').aggregate('count').reset_index()
+    st.dataframe(df1)
+
+    opt = st.selectbox("token:", df1.reset_index().token.unique())
+    if opt != '...':
+        df2 = df.loc[df.token == opt, ['service', 'log_date', 'error_line']].groupby(['service', 'error_line']).aggregate('count').sort_values('log_date', ascending=False)
+        st.dataframe(df2.reset_index())
 
 
 options={   '...':None, 

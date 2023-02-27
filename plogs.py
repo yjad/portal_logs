@@ -293,7 +293,7 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type, project_id, 
             # print ('***', line_no, v)
             with open(Exception_File, 'at', encoding='utf8')as f:
                 f.write(f"{line_no},{txt}")  # append line
-            return None
+            return None, None
             # out_error.write('NID '+str(line_no) + ", ERROR," + str(e) +"||"+ v)
             # token = "Unclassified"
             # service = 'Unclassified'

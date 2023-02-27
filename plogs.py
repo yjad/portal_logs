@@ -115,7 +115,8 @@ def zip_log_to_df(zip_file):
                 continue    # Invalid record format, ignore rest of parsing
             rec = None
             if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
-                task_id = int(txt[99:103]) # task_id
+                # task_id = int(txt[99:103]) # task_id
+                task_id = None
                 project_id = None
                 # ----------- Debug tech rec only -----
                 rec, rec_project_type = parse_nid_rec(txt, line_no, out_error, dt, log_type, project_id, task_id)

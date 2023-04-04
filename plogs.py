@@ -7,6 +7,7 @@ import numpy as np
 import zipfile, tarfile
 from csv import QUOTE_ALL
 import plog2
+import streamlit as st
 
 
 # from tzlocal import get_localzone_name
@@ -92,6 +93,12 @@ def zip_log_to_df(zip_file):
     project_type = None
     zfiles = yield_zip_file(zip_file, file_type)
     for f in zfiles:
+
+        line_count = sum(1 for _ in f)
+        f.seek(0)
+        # st.write('Line Count: ', line_count)
+        my_prog_bar = st.progress(0, text="")
+        percent_complete = 0
         line_no = 0
         # print (fname)
         while True:
@@ -103,7 +110,10 @@ def zip_log_to_df(zip_file):
             # if line_no > 5000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
-            if line_no % 40000 == 0: print (line_no)
+            if line_no % 40000 == 0: 
+                #print (line_no)
+                percent_complete =  int(line_no/line_count*100)
+                my_prog_bar.progress(percent_complete, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
             
             txt = txt.decode('utf-8')
             log_type = txt[24:29]
@@ -132,7 +142,8 @@ def zip_log_to_df(zip_file):
                 rec  = plog2.parse_tech_rec(txt, line_no, out_error, dt, log_type)
             if not rec: continue    # invalid line, skip it
             # print ('------------', rec)
-            log_lst.append(rec)  
+            log_lst.append(rec) 
+        my_prog_bar.progress(100, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
 
     out_error.close()
     if project_type == 'confirmLandReservation':  
@@ -368,7 +379,7 @@ def summerize_portal_logs(fpath, load_db=False):
 
     # x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count().\
     #     sort_values(by=['dt', 'categ', 'line_no'], ascending=False)
-    print ('Loading done ...')
+    # print ('Loading done ...')
     dts = sorted(log_df.dt.unique())
     for d in dts: # split multi-date log file into a seperate zip csv file for each day 
         out_file_path = os.path.join(SUMMARY_FOLDER, f"log summary-{d}.zip")

@@ -7,30 +7,30 @@ import streamlit as st
 #     st.write(f"option is {replace_it}")
 
 
-# st.help(st.radio)
+st.help(st.download_button)
 
-fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\server.log.2022-04-03.tar.gz"
-if st.button("start"):
+# fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\server.log.2022-04-03.tar.gz"
+# if st.button("start"):
 
 
-    with open(fn, 'rt', errors='ignore') as f:
-        count = sum(1 for _ in f)
+#     with open(fn, 'rt', errors='ignore') as f:
+#         count = sum(1 for _ in f)
 
-    progress_text = "Operation in progress. Please wait- "
-    my_bar = st.progress(0, text=progress_text)
+#     progress_text = "Operation in progress. Please wait- "
+#     my_bar = st.progress(0, text=progress_text)
 
-    with open(fn, 'rt', errors='ignore') as f:
-        line_no = 0
-        percent_complete = 0
-        while True:
+#     with open(fn, 'rt', errors='ignore') as f:
+#         line_no = 0
+#         percent_complete = 0
+#         while True:
            
-            txt = f.readline()
-            if not txt:
-                break
-            line_no = line_no+1
-            if line_no % 1000 == 0: 
-                percent_complete =  int(line_no/count*100)
-                my_bar.progress(percent_complete, text=progress_text+str(line_no))
-        my_bar.progress(100, text=progress_text+str(line_no))
-    st.write("## Done")
-    st.button('reset')
+#             txt = f.readline()
+#             if not txt:
+#                 break
+#             line_no = line_no+1
+#             if line_no % 1000 == 0: 
+#                 percent_complete =  int(line_no/count*100)
+#                 my_bar.progress(percent_complete, text=progress_text+str(line_no))
+#         my_bar.progress(100, text=progress_text+str(line_no))
+#     st.write("## Done")
+#     st.button('reset')

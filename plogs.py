@@ -560,3 +560,58 @@ def load_project_table(uploaded_file):
     df.to_sql('project', conn, if_exists='replace')
     conn.close()
 
+def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int):
+    if type(zip_file) == str :
+        file_type = 'file'
+        if os.path.isdir(zip_file):
+            # log_files = resolve_log_files(file_path)
+            pass
+        else:
+            log_files = [zip_file]
+            file_type = os.path.splitext(log_files[0])[1]
+    else:   # buffer of one or more files
+        file_type = os.path.splitext(zip_file.name)[1]
+        # print (log_file.name)
+    zfiles = yield_zip_file(zip_file, file_type)
+    for f in zfiles:
+        line_count = sum(1 for _ in f)
+        f.seek(0)
+        # st.write('Line Count: ', line_count)
+        my_prog_bar = st.progress(0, text="")
+        percent_complete = 0
+        line_no = 1
+        lst = []
+        line_nos=[]
+        if option == 1:     # quote range of lines
+            
+            for _ in f: 
+                line_no += 1
+                if line_no >= from_line:
+                    break
+
+            st.write(from_line, to_line, line_no)
+            while line_no <= to_line:
+                txt = f.readline().decode('utf-8')
+                if not txt: break
+                lst.append(txt)
+                line_nos.append(line_no)
+                line_no += 1
+        
+        elif option ==2:    # quote lines with given string
+            while True:
+                txt = f.readline().decode('utf-8')
+                if not txt: break # end of file
+                
+                if txt.find(quote) != -1:
+                    lst.append(txt)
+                    line_nos.append(line_no)
+
+                line_no += 1
+                # if line_no > 5000: break    # debug
+                # if line_no < 100000000: continue
+                # if line_no % 10000 == 0: print (line_no)
+                if line_no % 40000 == 0: 
+                    #print (line_no)
+                    percent_complete =  int(line_no/line_count*100)
+                    my_prog_bar.progress(percent_complete, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
+        return pd.DataFrame(data=lst, index= line_nos, columns=['log'])

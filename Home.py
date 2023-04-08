@@ -49,3 +49,7 @@ def excel_download(df, index, file_name, link_display_title = 'Download excel fi
     href= f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{file_name}">{link_display_title}</a>'
     return href
 
+def text_download(lst, index, file_name, link_display_title = 'Download Text File'):
+    b64 = base64.b64encode(lst.encode()).decode()  # strings <-> bytes conversions
+    href = f'<a href="data:file/csv;base64,{b64}" download="{file_name}">{link_display_title}</a>'
+    return href

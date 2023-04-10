@@ -35,8 +35,15 @@ def load_db_project_table():
     st.success("File Loaded ...")
 
 def quote_log_file():
-    uploaded_file= st.file_uploader('Select Log file',type=["zip", 'gz'], accept_multiple_files = False)
-    option = st.radio("Optios: ",["Quote range", "Quote string"] )
+    file_size_option = st.radio("File Size: ",["< 200 MB", "Big file"], horizontal = True)
+    if file_size_option == "< 200 MB":
+        uploaded_file= st.file_uploader('Select Log file',type=["zip", 'gz'], accept_multiple_files = False)
+        # uploaded_file_type = 'UPLOAD'
+    else:
+        uploaded_file = st.text_input(label = "Enter file path:")
+        # uploaded_file_type = str
+
+    option = st.radio("Optios: ",["Quote range", "Quote string"] , horizontal = True)
     if option == "Quote range":
         from_line_no = st.number_input('From Line_no: ', step=1)
         to_line_no   = st.number_input('to   Line_no: ', step=1)
@@ -53,6 +60,9 @@ def quote_log_file():
     if st.button('Process ...') and uploaded_file:
         with st.spinner("Please Wait ... "):
             df = logs.quote_log_file(uploaded_file, option = ioption, quote = quote, from_line = from_line_no, to_line = to_line_no)
+            if df.size == 0: 
+                st.warning("No data found ...")
+                return 
             st.write ("No of lines: ", len(df))
             st.write (df[:20])
             df = df.to_csv().encode('utf-8')

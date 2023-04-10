@@ -561,6 +561,7 @@ def load_project_table(uploaded_file):
     conn.close()
 
 def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int):
+    from datetime import datetime
     if type(zip_file) == str :
         file_type = 'file'
         if os.path.isdir(zip_file):
@@ -572,11 +573,17 @@ def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int
     else:   # buffer of one or more files
         file_type = os.path.splitext(zip_file.name)[1]
         # print (log_file.name)
+    st.write(datetime.now(), 'before yield_zip_file ....')
     zfiles = yield_zip_file(zip_file, file_type)
+    st.write(datetime.now(),'After yield_zip_file ....')
+
     for f in zfiles:
+        st.write(datetime.now(),'before line count....')
         line_count = sum(1 for _ in f)
+        
         f.seek(0)
-        # st.write('Line Count: ', line_count)
+
+        st.write(datetime.now(),'Line Count: ', line_count)
         my_prog_bar = st.progress(0, text="")
         percent_complete = 0
         line_no = 1
@@ -610,8 +617,9 @@ def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int
                 # if line_no > 5000: break    # debug
                 # if line_no < 100000000: continue
                 # if line_no % 10000 == 0: print (line_no)
-                if line_no % 40000 == 0: 
+                if line_no % 40000 == 0: # and type(zip_file) != str:    # dont show progress for big files
                     #print (line_no)
-                    percent_complete =  int(line_no/line_count*100)
+                    # percent_complete =  int(line_no/line_count*100)
+                    percent_complete =  50
                     my_prog_bar.progress(percent_complete, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
         return pd.DataFrame(data=lst, index= line_nos, columns=['log'])

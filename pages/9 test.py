@@ -7,7 +7,7 @@ import streamlit as st
 #     st.write(f"option is {replace_it}")
 
 
-st.help(st.download_button)
+st.help(st.radio)
 
 # fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\server.log.2022-04-03.tar.gz"
 # if st.button("start"):

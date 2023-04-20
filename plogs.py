@@ -513,9 +513,9 @@ def plot_log_summary(df, selected_dts, selected_tokens):
     
     
     if len(selected_dts) == 1:      # single day
-        fig = dfx.pivot(index='token', columns='dt', values = 'Count').plot(kind='bar').get_figure()
+        fig = dfx.pivot(index='token', columns='dt', values = 'Count').plot.barh(figsize=(10,5)).get_figure()
     else:   # multi day graph
-        fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line', figsize=(10,6)).get_figure()
+        fig = dfx.pivot(index='dt', columns='token', values = 'Count').plot(kind = 'line', figsize=(10,6), rot=45).get_figure()
     return fig
 
 

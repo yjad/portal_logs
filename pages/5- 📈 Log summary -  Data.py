@@ -4,6 +4,7 @@ import streamlit as st
 import plogs as logs 
 import Home as stu
 import DB as db
+from os import path
 
 def load_summary_file(accept_multiple = False):
     csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = accept_multiple)
@@ -114,12 +115,40 @@ def tech_log():
         df2 = df.loc[df.token == opt, ['service', 'log_date', 'error_line']].groupby(['service', 'error_line']).aggregate('count').sort_values('log_date', ascending=False)
         st.dataframe(df2.reset_index())
 
+def res_rate():
+    csv_files =load_summary_file(False)
+    if not csv_files:
+        return
+    
+    df = pd.read_csv(csv_files, compression='zip', dtype_backend='pyarrow', date_parser='log_date')
+    st.write(df.head())
+    st.write(df.log_date.dtype)
+    if df.size == 0: return
+    df['hr'] = df.log_date.dt.hour
+    df['min'] = df.log_date.dt.minute
+    df['date'] = df.log_date.dt.date
+
+    log_file_date = path.split(csv_files.filename)[1][12:22]
+    if df.query("token == 'confirmLandReservation True'").shape[0] != 0: 
+        token = 'confirmLandReservation True'
+        project_type = 'Land'
+    elif df.query("token == 'confirmReservation True'").shape[0] != 0: 
+        token = 'confirmReservation True'
+        project_type = 'Unit'
+    else: 
+        project_type = None
+    
+    df = df.rename({'log_date': '# of reservations'}, axis=1)
+    if token:
+        df.query(f"token == '{token}'")[['# of reservations', 'hr', 'min',]].groupby(['hr', 'min']).count().\
+            plot(title=f"{project_type} Reservation rate by Hour/Min {log_file_date}", rot=45,figsize=(10,5))
 
 options={   '...':None, 
             '1- Log Summary all': log_summary_all,
             '2- Tech log stats ': tech_log, 
             # '3- Summarize log exception file': summarize_log_exceptions_file,
             # "4- Load Portal Projects' Data": load_db_project_table 
+            "3- Reservation Rate": res_rate 
         }
 
 opt = st.sidebar.selectbox("Options",options.keys())

@@ -94,26 +94,28 @@ def zip_log_to_df(zip_file):
     zfiles = yield_zip_file(zip_file, file_type)
     for f in zfiles:
 
-        line_count = sum(1 for _ in f)
-        f.seek(0)
-        # st.write('Line Count: ', line_count)
-        my_prog_bar = st.progress(0, text="")
-        percent_complete = 0
+        # line_count = sum(1 for _ in f)
+        # f.seek(0)
+        f.seek(0,2) # end
+        file_size = f.tell()
+        line_count = int(file_size/145)   # avrage 145 bytes/line
+        f.seek(0,0)     # set pointer to beginning of file
+        # my_prog_bar = st.progress(0, text="")
+        placeholder = st.empty()
+        # percent_complete = 0
         line_no = 0
-        # print (fname)
         while True:
             txt = f.readline()
-            # print (len(txt), txt)
-            if not txt: break # end of file
-            line_no += 1
+            if not txt: break
+            line_no +=1
 
             # if line_no > 5000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
             if line_no % 40000 == 0: 
-                #print (line_no)
-                percent_complete =  int(line_no/line_count*100)
-                my_prog_bar.progress(percent_complete, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
+                # percent_complete =  int(line_no/line_count*100)
+                # my_prog_bar.progress(percent_complete, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
+                placeholder.write(f"{line_no}/{line_count} - {int(line_no/line_count*100)}%")#, disabled=True)
             
             txt = txt.decode('utf-8')
             log_type = txt[24:29]
@@ -124,7 +126,8 @@ def zip_log_to_df(zip_file):
                 out_error.write('***Invalid record format***, '+ str(line_no) + ", ERROR," + str(txt))
                 continue    # Invalid record format, ignore rest of parsing
             rec = None
-            if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
+            # if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
+            if 'WebRequestInterceptor' in txt: # time optimization
                 # task_id = int(txt[99:103]) # task_id
                 task_id = None
                 project_id = None
@@ -143,7 +146,9 @@ def zip_log_to_df(zip_file):
             if not rec: continue    # invalid line, skip it
             # print ('------------', rec)
             log_lst.append(rec) 
-        my_prog_bar.progress(100, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
+        # my_prog_bar.progress(100, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
+        placeholder.write(f"{line_no}/{line_count} - {int(line_no/line_count*100)}%")
+
 
     out_error.close()
     if project_type == 'confirmLandReservation':  
@@ -245,7 +250,8 @@ def summerize_exception_file(uploaded_file):
             continue    # Invalid record format, ignore rest of parsing
         # rec = None
         
-        if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
+        # if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
+        if 'WebRequestInterceptor' in txt: #time optimization
             rec = parse_nid_rec(txt, line_no, None, dt, log_type)
         else:
             if log_type in ('INFO ', 'WARN '): continue # skip info for tech errors
@@ -340,7 +346,8 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
     classified= False
     
     for token in search_tokens.itertuples():
-        if txt.find(token.token) != -1: # found
+        # if txt.find(token.token) != -1: # found
+        if token.token in txt: # found, time optimization
             # print (token, "------->", token) 
             # error_token = token.token
             if pd.isnull(token.desc):
@@ -609,7 +616,7 @@ def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int
                 txt = f.readline().decode('utf-8')
                 if not txt: break # end of file
                 
-                if txt.find(quote) != -1:
+                if quote in txt:
                     lst.append(txt)
                     line_nos.append(line_no)
 

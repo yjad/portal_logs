@@ -5,6 +5,7 @@ import io
 import os
 
 # @st.experimental_memo(suppress_st_warning=True)
+# @st.cache_data
 def upload_csv_files(csv_files):
     if not csv_files:
         st.warning('No csv files loaded, load files first ...') 
@@ -13,11 +14,20 @@ def upload_csv_files(csv_files):
         with st.spinner("Please Wait ... "):
             All_df = pd.DataFrame() # reset
             for f in csv_files:
-                df_1  = pd.read_csv(f,  compression= 'zip', dtype={'NID':str}, low_memory=False)
                 # df_1  = pd.read_csv(f, low_memory=False)
+                # df_1  = pd.read_csv(f,  compression= 'zip', dtype={'NID':str}, low_memory=False)
+                # 23-04-2023 --> migrate to pandas 2.0 and use pyarrow
+                df_1  = pd.read_csv(f,  compression= 'zip', dtype={'NID':'string[pyarrow]'}, engine= 'pyarrow', dtype_backend = 'pyarrow')
+                # df_1  = pd.read_csv(f,  compression= 'zip', engine= 'pyarrow', dtype_backend = 'pyarrow')
+                # st.write(df_1.NID[:10])
+                # print (df_1.info())
+                df_1 = (df_1
+                        .assign(dt = df_1.log_date.dt.date)
+                        .assign(NID = df_1.NID.str[:14]))   # remove '.0'
+
                 All_df = pd.concat([All_df, df_1])
-            All_df.drop_duplicates(subset = ['dt', 'line_no'], inplace=True)
-            dts = sorted(All_df.dt.unique())
+            # All_df.drop_duplicates(subset = ['dt', 'line_no'], inplace=True)
+            dts = sorted(All_df.log_date.dt.date.unique())
             strt = dts[0]
             end =dts[-1]
         

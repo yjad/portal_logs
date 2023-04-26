@@ -12,8 +12,8 @@ def load_summary_file(accept_multiple = False):
 
 
 def log_summary_all():
-    csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = True)
-    # csv_files = load_summary_file(accept_multiple = False)
+    # csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = True)
+    csv_files = load_summary_file(accept_multiple = True)
 
     df, dt_from, dt_to, dts = stu.upload_csv_files(csv_files)
 
@@ -92,12 +92,13 @@ def log_summary_all():
 
 
 def tech_log():
-
-    csv_files =load_summary_file(False)
+    # csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = True)
+    csv_files =load_summary_file(True)
     if not csv_files:
         return
     
-    df = pd.read_csv(csv_files, compression='zip', low_memory=False)
+    df, _,_, _= stu.upload_csv_files(csv_files)
+    # df = pd.read_csv(csv_files, compression='zip', low_memory=False)
     
     if df.size == 0: return
 
@@ -116,21 +117,21 @@ def tech_log():
         st.dataframe(df2.reset_index())
 
 def res_rate():
-    csv_files =load_summary_file(False)
+    csv_files =load_summary_file(True)
     if not csv_files:
         return
     
-    df = pd.read_csv(csv_files, compression='zip', dtype_backend='pyarrow', parse_dates=['log_date'])
-    # print(df.info())
-    # st.write(pd.to_datetime(df.log_date))
+    # df = pd.read_csv(csv_files, compression='zip', dtype_backend='pyarrow', parse_dates=['log_date'])
+    df, _,_, _= stu.upload_csv_files(csv_files)
     if df.size == 0: return
-
-    df = (df.assign (log_date = pd.to_datetime(df.log_date))
+    df = df.assign (log_date = pd.to_datetime(df.log_date))
+    # st.write(df.log_date.dtype)
+    df = (df
             .assign (hr = df.log_date.dt.hour)
             .assign(min = df.log_date.dt.minute)
             .assign(date = df.log_date.dt.date))
 
-    log_file_date = path.split(csv_files.name)[1][12:22]
+    log_file_date = path.split(csv_files[0].name)[1][12:22]
     if df.query("token == 'confirmLandReservation True'").shape[0] != 0: 
         token = 'confirmLandReservation True'
         project_type = 'Land'
@@ -149,12 +150,63 @@ def res_rate():
     else:
         st.info("## No reservation on that log ...")
 
+
+def res_by_gov():
+    csv_files =load_summary_file(True)
+    if not csv_files:
+        return
+    df, _,_, _= stu.upload_csv_files(csv_files)
+    nid_gov = pd.read_csv(r".\portal_gov.csv")[['nid_gov_code', 'portal_gov_name']].drop_duplicates(subset='portal_gov_name')
+    land_proj= df.query("token == 'confirmLandReservation True'").count()[0]
+    if land_proj > 0:
+        st.title("Land Reservation By Governrate ")
+    else:
+        st.title("Unit Reservation By Governrate ")
+
+    
+    dfo= (df.query("token in ('confirmLandReservation True', 'confirmReservation True')")[['NID', 'City']]
+        .assign(nid_gov_code= lambda x: x.NID.str[7:9].astype(int))
+        .merge(nid_gov, how='left', on= 'nid_gov_code')
+        .reset_index(drop=True)
+        # .drop(['nid_gov_code', 'gov_code', 'city_code', 'city_name'], axis=1)
+        .drop(['nid_gov_code'], axis=1)
+        .rename(columns={'NID': '# of Reservations',
+                'portal_gov_name':'birth_gov',
+                'City':'Reservaion City'})
+        .groupby([  'birth_gov','Reservaion City',]).count()
+        .sort_values(by= '# of Reservations', ascending=False)
+    )
+
+    st.dataframe(dfo)
+
+    dfoo= (df.query("token in ('confirmLandReservation True', 'confirmReservation True')")[['NID', 'City']]
+    .assign(nid_gov_code= lambda x: x.NID.str[7:9].astype(int))
+    .merge(nid_gov, how='left', on= 'nid_gov_code')
+    .reset_index(drop=True)
+    # .drop(['nid_gov_code', 'gov_code', 'city_code', 'city_name'], axis=1)
+    .drop(['nid_gov_code'], axis=1)
+    .groupby(['City', 'portal_gov_name',]).count()
+    .reset_index()
+)
+    total_res_city = dfoo.drop(columns='portal_gov_name').groupby(['City']).sum()
+    dfoo = (dfoo.merge(total_res_city, how='left', on='City')
+    .assign(percent= lambda x: (100*x['NID_x']/x['NID_y']).astype(int))
+    .rename(columns={'NID_x': '# of Reservations',
+                'City':'Reservaion City',
+                'portal_gov_name':'birth_gov'})
+    .groupby(['Reservaion City', 'birth_gov']).sum()
+    .drop(columns=['NID_y'])
+    .sort_values(by=['Reservaion City', 'percent'], ascending=[True, False])
+)
+    st.dataframe(dfoo)
+
 options={   '...':None, 
             '1- Log Summary all': log_summary_all,
             '2- Tech log stats ': tech_log, 
             # '3- Summarize log exception file': summarize_log_exceptions_file,
             # "4- Load Portal Projects' Data": load_db_project_table 
-            "3- Reservation Rate": res_rate 
+            "3- Reservation Rate": res_rate, 
+            "4- Reservation by birth Governrate": res_by_gov,
         }
 
 opt = st.sidebar.selectbox("Options",options.keys())

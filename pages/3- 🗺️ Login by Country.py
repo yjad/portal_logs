@@ -19,4 +19,4 @@ if strt: # files selected
         st.dataframe(df)
         st.download_button(label = 'Save to csv', data = stu.convert_df(df), file_name = 'Login By Country.csv', mime = 'text/csv')
     else:
-        st.info('#### No data to display')
+        st.info('#### No data to display') 

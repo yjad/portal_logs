@@ -69,12 +69,12 @@ def zip_log_to_df(zip_file):
     out_error = open(nid_error_file, "wt", encoding='utf-8')
     land_col = ["log_date","node","line_no", "NID", "log_type" , 
                     "country", "IP_address", "service", "token", "categ",  'task_id', 'project_id',"error_line",
-                    'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum', '', '']
+                    'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum', 'NA1', 'NA2']
     unit_col = ["log_date","node","line_no", "NID", "log_type" , 
                     "country", "IP_address", "service", "token", "categ",'project_id', 'task_id',  "error_line",
                     'Gov','City','Region','District','Sub_District','Floor_No','building_no','Unit_No','Unit_Model', 'Unit_ID', 'checksum']
     # log_pd = pd.DataFrame(columns=col)
-    
+    placeholder = st.empty()
     if type(zip_file) == str :
         file_type = 'file'
         if os.path.isdir(zip_file):
@@ -91,7 +91,9 @@ def zip_log_to_df(zip_file):
     log_lst = []
     proj_id_lst = []
     project_type = None
+    placeholder.write("Unzip log file ...")
     zfiles = yield_zip_file(zip_file, file_type)
+    placeholder.write("Process log file ...")
     for f in zfiles:
 
         # line_count = sum(1 for _ in f)
@@ -101,7 +103,7 @@ def zip_log_to_df(zip_file):
         line_count = int(file_size/145)   # avrage 145 bytes/line
         f.seek(0,0)     # set pointer to beginning of file
         # my_prog_bar = st.progress(0, text="")
-        placeholder = st.empty()
+        
         # percent_complete = 0
         line_no = 0
         while True:
@@ -109,19 +111,21 @@ def zip_log_to_df(zip_file):
             if not txt: break
             line_no +=1
 
-            # if line_no > 5000: break
+            # if line_no > 50000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
             if line_no % 40000 == 0: 
                 # percent_complete =  int(line_no/line_count*100)
                 # my_prog_bar.progress(percent_complete, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
-                placeholder.write(f"{line_no}/{line_count} - {int(line_no/line_count*100)}%")#, disabled=True)
+                placeholder.write(f"{line_no:,}/{line_count:,} - {line_no/line_count:.2%}")
             
             txt = txt.decode('utf-8')
-            log_type = txt[24:29]
+            
             
             try:
                 dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
+                log_type = txt[24:29]
+                # print (log_type)
             except:
                 out_error.write('***Invalid record format***, '+ str(line_no) + ", ERROR," + str(txt))
                 continue    # Invalid record format, ignore rest of parsing
@@ -147,84 +151,22 @@ def zip_log_to_df(zip_file):
             # print ('------------', rec)
             log_lst.append(rec) 
         # my_prog_bar.progress(100, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
-        placeholder.write(f"{line_no}/{line_count} - {int(line_no/line_count*100)}%")
+        placeholder.write(f"{line_no:,}/{line_count:,} - {line_no/line_count:.2%}")
 
 
     out_error.close()
     if project_type == 'confirmLandReservation':  
         log_pd = pd.DataFrame(log_lst, columns = land_col)
     else:
-        log_pd = pd.DataFrame(log_lst, columns = unit_col)
+        try:
+            log_pd = pd.DataFrame(log_lst, columns = unit_col)
+        except: # no-reservation day, no details in all log. use mini column list with no details
+            log_pd = pd.DataFrame(log_lst, columns = land_col[:13])
 
     # log_pd.to_csv('./out/log_pd.csv', index=False)
     # pd.DataFrame(proj_id_lst, columns=['line_no', 'project_id', 'task_id']).to_csv('./out/proj_id_lst.csv')
     return log_pd
-# --------------------
-# Not used any more
-#
-#----------------
-def log_2_df_XXXXXXXX(file_path):
-   
-    if type(file_path) == str :
-        file_type = 'file'
-        if os.path.isdir(file_path):
-            log_files = resolve_log_files(file_path)
-        else:
-            log_files = [file_path]
-    else:   # buffer of one or more files
-        log_files = file_path
-        file_type = 'buffer'
 
-    out_error = open(nid_error_file, "wt", encoding='utf-8')
-    col = ["log_date","node","line_no", "NID", "log_type" , 
-                    "country", "IP_address", "service", "token", "categ", "error_line",
-                    'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum']
-    # log_pd = pd.DataFrame(columns=col)
-    log_pd = pd.DataFrame()
-    log_lst = []
-    # print (log_pd)
-
-    for log_file in log_files:
-        if file_type == 'file':
-            f = open(log_file, 'rt', encoding='utf-8')
-            # print (log_file)
-        else:
-            f= log_file
-            # print (log_file.name)
-        
-        line_no = 0
-        while True:
-            txt = f.readline()
-
-            if not txt:
-                break
-            line_no += 1
-            if file_type == 'buffer':
-                txt = txt.decode('utf-8')
-
-            # if line_no > 100: break
-            if line_no % 15000 == 0: print (line_no)
-            log_type = txt[24:29]
-            if log_type in ('INFO ', 'WARN '): continue
-            try:
-                dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
-            except:
-                out_error.write('***Invalid record format***, '+ str(line_no) + ", ERROR," + str(txt))
-                continue    # Invalid record format, ignore rest of parsing
-            rec = None
-            if txt.find('WebRequestInterceptor') != -1: #('"nid"') != -1: #log_type == 'ERROR' and , time optimization
-                rec = parse_nid_rec(txt, line_no, out_error, dt)
-                # pass
-            else:
-                rec  = parse_tech_rec(txt, line_no, out_error, dt)
-
-            if not rec: continue    # invalid line, skip it
-  
-            log_lst.append(rec)      
-
-    out_error.close()
-    log_pd = pd.DataFrame(log_lst, columns = col)
-    return log_pd
 
 def summerize_exception_file(uploaded_file):
     col = ["log_date","node","line_no", "NID", "log_type" , 
@@ -263,10 +205,12 @@ def summerize_exception_file(uploaded_file):
     log_pd = pd.DataFrame(log_lst, columns = col)
     d= pd.to_datetime(log_pd['log_date']).dt.date.unique()[0]
     # print (d)
-    log_pd['dt'] = d
+    # log_pd = d
     file_name = f"log summary-exception-{d}.zip"
     out_file_path = os.path.join(SUMMARY_FOLDER, file_name)
-    log_pd.to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"log summary-exception-{d}.csv"})
+    # log_pd = log
+    log_pd.to_csv(out_file_path, index_col=['line_no'],  
+                  compression={'method': 'zip', 'archive_name': f"log summary-exception-{d}.csv"})
     
 def data_cleansing(txt):
     return txt.replace ('""', '"')  # replace double quote in text to a single
@@ -382,17 +326,20 @@ def summerize_portal_logs(fpath, load_db=False):
     Exception_File = os.path.join(SUMMARY_FOLDER, f"{exception_file_name}")
     open(Exception_File,'wt').close()   # clear file
     log_df = zip_log_to_df(fpath)       # summerize one zip file
-    log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date 
+    # log_df['dt'] = pd.to_datetime(log_df['log_date']).dt.date 
 
     # x = log_df[['dt', 'token','categ', 'line_no']].fillna('x').groupby(['dt', 'token','categ'],as_index = False).count().\
     #     sort_values(by=['dt', 'categ', 'line_no'], ascending=False)
     # print ('Loading done ...')
-    dts = sorted(log_df.dt.unique())
-    for d in dts: # split multi-date log file into a seperate zip csv file for each day 
-        out_file_path = os.path.join(SUMMARY_FOLDER, f"log summary-{d}.zip")
+    # dts = sorted(log_df.dt.unique())
+    # log_df = log_df.assign(log_date= pd.to_datetime(log_df['log_date']))
+    # dts = sorted(log_df['log_date'].dt.date.unique())
+    # for d in dts: # split multi-date log file into a seperate zip csv file for each day 
+    d = log_df['log_date'].dt.date.unique()[0]
+    out_file_path = os.path.join(SUMMARY_FOLDER, f"log summary-{d}.zip")
        
-        df = log_df.loc[log_df.dt == d]
-        df.to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"log summary-{d}.csv"})
+        # df = log_df.loc[log_df.log_date.dt.date == d]
+    log_df.to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"log summary-{d}.csv"})
         # df.to_csv('./out/xx.csv', index=False)
         # update_summary_db(df)
 
@@ -431,7 +378,7 @@ def display_reservation_cntry(df, selected_dts):
     # df.rename (columns={'line_no':'Count'}, inplace = True)
     df.country.fillna('not logged', inplace=True)
     # dts_from, dts_to, _ = get_df_dates()
-
+   
     df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True']), ['token', 'country', 'line_no', 'NID']]
     df = df.set_index('country').join(Cntry.set_index('Alpha-2 code'), how = 'left')
     if not df.empty:
@@ -543,23 +490,25 @@ def get_tokens(df, categ=None):
 
 def get_reservation_nid(df):
     # print (df.NID.dtypes)
-    if df.NID.dtypes == float:
-        df.NID = df.NID.fillna(0).astype(np.int64)
-
-    df.NID = df.NID.fillna('').astype(str)
+    # if df.NID.dtypes == float:
+    #     df.NID = df.NID.fillna(0).astype(np.int64)
+    # df.NID = df.NID.fillna('').astype(str)
     cust_nos = df.loc[df.token.isin(['confirmLandReservation True', 'confirmReservation True']), ['NID', 'log_date']].sort_values(['log_date', 'NID'])
     
     res_data = df.loc[df.NID.isin(cust_nos.NID), ['NID','log_date', 'token' ]]
     res_data.token.loc[res_data.token == 'confirmLandReservation True'] = 'Land Reservation'
     
-    cust_list = cust_nos.NID + " --> Reservation time: " + cust_nos.log_date
+    # cust_list = cust_nos.NID + " --> Reservation time: " + cust_nos.log_date.dt.strptime('%Y-%m-%d %H:%M:%S')
+    cust_list = cust_nos.NID + " --> Reservation time: " + cust_nos.log_date.astype(str)
 
     return cust_list, res_data
+
 
 def update_summary_db(df):
     df_pivot = pd.pivot_table(df, index = ['categ','token'], columns='dt', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
     return df_pivot
     pass
+
 
 def load_project_table(uploaded_file):
     df = pd.read_csv(uploaded_file)

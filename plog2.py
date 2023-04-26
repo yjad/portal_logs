@@ -138,7 +138,7 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
         service = 'Unclassified'
         error_token = None
         error_categ = None
-        txt = txt[30:]      # to be analyzed
+        txt = txt[30:-1]      # to be analyzed, -1 to exclude \n
         
 
     rec_lst = [dt, None, line_no, None, log_type, None, None, service, error_token, error_categ,  project_id, task_id, txt]    

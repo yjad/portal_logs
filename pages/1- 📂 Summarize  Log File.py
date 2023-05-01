@@ -6,7 +6,7 @@ import Home as stu
 
 
 def summarize_log_file():
-    uploaded_files= st.file_uploader('Select Log file',type=["zip", 'gz'], accept_multiple_files = False)
+    uploaded_files= st.file_uploader('Select Log file',type=["zip", 'gz', '7z'], accept_multiple_files = False)
     if st.button('Process ...') and uploaded_files:
         with st.spinner("Please Wait ... "):
             logs.summerize_portal_logs(uploaded_files, load_db=False)
@@ -37,34 +37,47 @@ def load_db_project_table():
 def quote_log_file():
     file_size_option = st.radio("File Size: ",["< 200 MB", "Big file"], horizontal = True)
     if file_size_option == "< 200 MB":
-        uploaded_file= st.file_uploader('Select Log file',type=["zip", 'gz'], accept_multiple_files = False)
+        uploaded_file= st.file_uploader('Select Log file',type=["zip", 'gz', '7z'], accept_multiple_files = False)
         # uploaded_file_type = 'UPLOAD'
     else:
         uploaded_file = st.text_input(label = "Enter file path:")
         # uploaded_file_type = str
 
-    option = st.radio("Optios: ",["Quote range", "Quote string"] , horizontal = True)
-    if option == "Quote range":
-        from_line_no = st.number_input('From Line_no: ', step=1)
-        to_line_no   = st.number_input('to   Line_no: ', step=1)
-        quote = None
-        ioption = 1
-        out_file_name = f"Log file range{from_line_no}-{to_line_no}.csv"
-    elif option == "Quote string":
-        quote = st.text_input('Quote to search: ')
-        from_line_no = to_line_no= None
-        ioption = 2
-        out_file_name = f"Log file quote- {quote}.csv"
+    # option = st.radio("Optios: ",["Quote range", "Quote string"] , horizontal = True)
+    # if option == "Quote range":
+    #     from_line_no = st.number_input('From Line_no: ', step=1)
+    #     to_line_no   = st.number_input('to   Line_no: ', step=1)
+    #     quote = None
+    #     ioption = 1
+    #     out_file_name = f"Log file range{from_line_no}-{to_line_no}.csv"
+    # elif option == "Quote string":
+    #     quote = st.text_input('Quote to search: ')
+    #     from_line_no = to_line_no= None
+    #     ioption = 2
+    #     out_file_name = f"Log file quote- {quote}.csv"
 
+    # option = st.radio("Optios: ",["Quote range", "Quote string"] , horizontal = True)
+    # if option == "Quote range":
+    col = st.columns(3)
+    from_line_no = col[0].number_input('From Line-no: ', step=1)
+    to_line_no   = col[1].number_input('To Line-no: ', step=1)
+    no_lines   = col[2].number_input('Max No. of Lines: ', step=1)
+    quote = st.text_input('Quote to search (case sensitive): ')
+        
+    out_file_name = f"Log file q-{quote} ft-{from_line_no}-{to_line_no}.csv"
 
     if st.button('Process ...') and uploaded_file:
         with st.spinner("Please Wait ... "):
-            df = logs.quote_log_file(uploaded_file, option = ioption, quote = quote, from_line = from_line_no, to_line = to_line_no)
+            # st.write(f"calling: quote = {quote}, from_line = {from_line_no}, to_line = {to_line_no}")
+            df = logs.quote_log_file(uploaded_file, option = 3, quote = quote, 
+                                     from_line = from_line_no, 
+                                     to_line = to_line_no,
+                                     no_lines= no_lines)
             if df.size == 0: 
                 st.warning("No data found ...")
                 return 
             st.write ("No of lines: ", len(df))
-            st.write (df[:20])
+            st.dataframe (df[:20], use_container_width=True)
             df = df.to_csv().encode('utf-8')
         
         st.download_button(label = 'Save Quote', data =df, file_name = out_file_name, mime = 'text/csv')

@@ -8,9 +8,10 @@ import zipfile, tarfile
 from csv import QUOTE_ALL
 import plog2
 import streamlit as st
+import py7zr
 
-
-# from tzlocal import get_localzone_name
+SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary" 
+Z7_TMP_DIR = './out/z7_temp'
 
 # from numpy import int32
 import DB as db 
@@ -19,7 +20,7 @@ import pandas as pd
 import country_codes
 import tokens_data
 
-SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary" 
+
 Exception_File = ''
 # CSV_PATH = r'.\data\log csv'
 nid_error_file = r".\out\nid_error.txt"   
@@ -62,6 +63,16 @@ def yield_zip_file(file_path, file_type):
                     f=tar.extractfile(member)
                     # print (f.name)
                     yield f
+        case '.7z':
+            if not os.path.exists(Z7_TMP_DIR):
+                os.mkdir(Z7_TMP_DIR)
+            with py7zr.SevenZipFile(file_path, mode='r') as zf:
+                zf.extractall(Z7_TMP_DIR)
+                for fname in os.listdir(Z7_TMP_DIR):
+                    file_path = os.path.join(Z7_TMP_DIR, fname)
+                    with open(file_path, 'rt', encoding= 'utf8') as f:
+                        yield f
+                    os.unlink(file_path)
 
 
 # Process one zip file
@@ -119,8 +130,7 @@ def zip_log_to_df(zip_file):
                 # my_prog_bar.progress(percent_complete, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
                 placeholder.write(f"{line_no:,}/{line_count:,} - {line_no/line_count:.2%}")
             
-            txt = txt.decode('utf-8')
-            
+            if type(txt) == bytes: txt= txt.decode('utf-8')
             
             try:
                 dt = datetime.strptime(txt[:19], '%Y-%m-%d %H:%M:%S')
@@ -516,8 +526,8 @@ def load_project_table(uploaded_file):
     df.to_sql('project', conn, if_exists='replace')
     conn.close()
 
-def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int):
-    from datetime import datetime
+def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int, no_lines:int):
+    # from datetime import datetime
     if type(zip_file) == str :
         file_type = 'file'
         if os.path.isdir(zip_file):
@@ -529,34 +539,37 @@ def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int
     else:   # buffer of one or more files
         file_type = os.path.splitext(zip_file.name)[1]
         # print (log_file.name)
-    st.write(datetime.now(), 'before yield_zip_file ....')
+    # st.write(datetime.now(), 'before yield_zip_file ....')
     zfiles = yield_zip_file(zip_file, file_type)
-    st.write(datetime.now(),'After yield_zip_file ....')
+    # st.write(datetime.now(),'After yield_zip_file ....')
 
     for f in zfiles:
-        st.write(datetime.now(),'before line count....')
-        line_count = sum(1 for _ in f)
+    # f = zfiles.__next__
+        # st.write(datetime.now(),'before line count....')
+        # line_count = sum(1 for _ in f)
         
-        f.seek(0)
+        # f.seek(0)
 
-        st.write(datetime.now(),'Line Count: ', line_count)
-        my_prog_bar = st.progress(0, text="")
-        percent_complete = 0
+        # st.write(datetime.now(),'Line Count: ', line_count)
+        # my_prog_bar = st.progress(0, text="")
+        # percent_complete = 0
+    # while(True):
         line_no = 1
         lst = []
         line_nos=[]
+        max_no_lines=1
         if option == 1:     # quote range of lines
-            
+            # skip from_line numbers
             for _ in f: 
+                if line_no >= from_line: break
                 line_no += 1
-                if line_no >= from_line:
-                    break
 
             st.write(from_line, to_line, line_no)
             while line_no <= to_line:
-                txt = f.readline().decode('utf-8')
+                txt = f.readline()
                 if not txt: break
-                lst.append(txt)
+                if type(txt) == bytes: txt = txt.decode('utf-8')
+                lst.append(txt[:-1])    # exclude \n
                 line_nos.append(line_no)
                 line_no += 1
         
@@ -569,13 +582,30 @@ def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int
                     lst.append(txt)
                     line_nos.append(line_no)
 
+        elif option ==3:    # quote lines  with given string in a range
+            # skip from_line lines
+            if from_line:
+                for _ in f: # skip from line_no 
+                    if line_no >= from_line: break
+                    line_no += 1
+
+            while True:
+                if to_line != 0 and line_no > to_line: break
+                txt = f.readline()
+                if not txt: break # end of file
+                if type(txt) == bytes: txt = txt.decode('utf-8')                
+                if not quote or (quote and quote in txt):
+                    lst.append(txt)
+                    line_nos.append(line_no)
+                    max_no_lines +=1
+                    if no_lines != 0 and max_no_lines> no_lines: break
                 line_no += 1
                 # if line_no > 5000: break    # debug
                 # if line_no < 100000000: continue
                 # if line_no % 10000 == 0: print (line_no)
-                if line_no % 40000 == 0: # and type(zip_file) != str:    # dont show progress for big files
+                # if line_no % 40000 == 0: # and type(zip_file) != str:    # dont show progress for big files
                     #print (line_no)
                     # percent_complete =  int(line_no/line_count*100)
-                    percent_complete =  50
-                    my_prog_bar.progress(percent_complete, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
+                    # percent_complete =  50
+                    # my_prog_bar.progress(percent_complete, text=f"Operation in progress. Please wait- {line_no}/{line_count}" )
         return pd.DataFrame(data=lst, index= line_nos, columns=['log'])

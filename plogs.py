@@ -80,10 +80,11 @@ def zip_log_to_df(zip_file):
     out_error = open(nid_error_file, "wt", encoding='utf-8')
     land_col = ["log_date","node","line_no", "NID", "log_type" , 
                     "country", "IP_address", "service", "token", "categ",  'task_id', 'project_id',"error_line",
-                    'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum', 'NA1', 'NA2']
+                    'Gov','Land_ID', 'City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum', 'NA1']
+                    # 'Gov','City','Region','District','Sub_District','Land_No','land_size','excellence_ratio','checksum', 'NA1', 'NA2']
     unit_col = ["log_date","node","line_no", "NID", "log_type" , 
                     "country", "IP_address", "service", "token", "categ",'project_id', 'task_id',  "error_line",
-                    'Gov','City','Region','District','Sub_District','Floor_No','building_no','Unit_No','Unit_Model', 'Unit_ID', 'checksum']
+                    'Gov', 'City','Region','District','Sub_District','Floor_No','building_no','Unit_No','Unit_Model', 'Unit_ID', 'checksum']
     # log_pd = pd.DataFrame(columns=col)
     placeholder = st.empty()
     if type(zip_file) == str :

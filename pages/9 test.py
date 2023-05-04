@@ -1,51 +1,86 @@
 import streamlit as st
+import pandas as pd
+import numpy as np
 import plogs
 import os
 
-# replace_it = st.radio("Log reservation data for project {project_id} already exists, replace it?", options=('Replace','Yes'))
-# if replace_it == 'Yes':
-#     "db.exec_cmd(f'DELETE FROM {log_table_name} WHERE proj_id = {project_id}'')"
-# elif replace_it == 'No':
-#     st.write(f"option is {replace_it}")
+def load_db_file(db_file_path):
+     dbdf= pd.read_csv(db_file_path, low_memory=False, dtype={'applicant_national_id':str})
+     return dbdf
 
 
-# st.help(st.radio)
-uploaded_files= st.file_uploader('Select Log file',type=["zip", 'gz'], accept_multiple_files = False)
-# f= st.file_uploader('Select Log file',type=["log"], accept_multiple_files = False)
-# fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\logs\server.log.2022-04-03.tar.gz"
-if st.button("start"):
-    zfiles = plogs.yield_zip_file(uploaded_files, '.gz')
-    for f in zfiles:
+def load_log_file(log_file_path):
+    return pd.read_csv(log_file_path, low_memory=False, dtype={'NID':str})
+    
 
-        # with open(fn, 'rt', errors='ignore') as f:
-        #     count = sum(1 for _ in f)
-        # count = 100000
-        # file_size = os.path.getsize(fn)
-        f.seek(0,2) # end
-        file_size = f.tell()
-       
-        count = int(file_size/136)   # avrage 136 bytes/line
-        st.write(count)
-        f.seek(0,0)
-        progress_text = "Operation in progress. Please wait- "
-        # my_bar = st.progress(0, text=progress_text)
-        placeholder = st.empty()
-        line_no = 0
-        user_count = 0
-        while True:
-        
-            txt = f.readline()
-            if not txt:
-                break
-            if 'WebRequestInterceptor' in txt:
-                user_count+=1
-            line_no = line_no+1
-            if line_no % 10000 == 0: 
-                # percent_complete =  int(line_no/count*100)
-                # my_bar.progress(percent_complete, text=progress_text+str(line_no))
-                # st.text(f"{percent_complete} - {progress_text} {line_no}")
-                placeholder.write(f"{line_no}/{count}", disabled=True)
-        # my_bar.progress(100, text=progress_text+str(line_no))
-        st.write('User count: ', user_count)
-        st.write("## Done")
-        st.button('reset')
+
+project_types = {'وحدات سكنية':1,'أراضى':2, 'مشروع مكمل لأراضى':4}
+LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary"
+project_details_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\Statistics_of_all_projects.xls"
+unit_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryUnit.zip"
+land_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryLand.zip"
+
+# log_date = st.date_input("Log Date:")
+# log_sum_fn = os.path.join(LOG_SUMMARY_FOLDER,f"log_summary-{log_date.strftime('%Y-%m-%d')}.zip")
+# st.write(log_sum_fn)
+# portal_proj_file = st.file_uploader('Select projects file',type=["xlsx", 'xls'], accept_multiple_files = False)
+if not os.path.exists(project_details_fn):
+        st.error(f"Porjects' details file not exists: {project_details_fn}")
+
+projdf = (pd.read_excel(project_details_fn, skiprows=1, usecols=[0,1,2,4, 5, 10], index_col=0)
+    .assign (start_date= lambda x: x.start_date.dt.date)
+    .assign (end_date= lambda x: x.end_date.dt.date)
+    .assign(select=False)
+    .sort_values(by='start_date', ascending=False)
+)
+selected = st.experimental_data_editor(projdf, height = 200, use_container_width=True).query("select == True")
+if not selected.empty:
+    if selected.select.count() > 1:
+        st.error("Should select only one row, deselect ...")
+    else:
+        project_id = selected.index[0]
+        project_type = project_types.get(selected.project_type_name_ar.iloc[0])
+        start_date = selected.start_date.iloc[0]
+        end_date = selected.end_date.iloc[0]
+        # st.write(project_id, project_type, start_date, end_date)
+        if start_date != end_date:  # multi-day project
+            lst = pd.date_range(start_date, end_date).date
+            log_date = st.selectbox("Select log date", lst)
+        else:
+            log_date = start_date
+
+        log_file_path = os.path.join(LOG_SUMMARY_FOLDER, f"log summary-{log_date.strftime('%Y-%m-%d')}.zip")
+        # st.write(log_file_path)
+        if not os.path.exists(log_file_path):
+            st.error(f"log file not exists: {log_file_path}")
+        else:
+            if project_type == 1:
+                query_token = "token == 'confirmReservation True'"  
+                db_file_name = unit_db_checksum_fn
+            else: 
+                query_token = "token == 'confirmLandReservation True'"
+                db_file_name = land_db_checksum_fn
+            if st.button('Match cheksum'):
+                with st.spinner("Reading log & DB files, please wait ..."):
+                    dbdf= load_db_file(db_file_name). query(f"project_id == {project_id}")
+                    logdf = (load_log_file(log_file_path)
+                            .query(query_token)
+                            .drop(columns=['node', 'task_id','project_id', 'error_line']))
+                    
+                    df = (dbdf.merge(logdf, left_on='applicant_national_id', right_on='NID')
+                            .assign(match = lambda x:(x.checksum == x.check_sum))
+                        )
+                    st.write("### Project match count")
+                    st.write("Lands count - DB: ", dbdf.shape[0])
+                    st.dataframe(df.match.value_counts())
+                    mismatch = df.query("match == False")
+                    if mismatch.empty:
+                        pass
+                    else:
+                        st.write("### Checksum mismatch details")
+                        if project_type == 1:
+                            st.dataframe(
+                                mismatch.assign(unit_id = lambda x: x.unit_id.astype(np.int64))[['NID', 'check_sum', 'checksum']])
+                        else:
+                            st.dataframe(
+                                mismatch.assign(unit_id = lambda x: x.land_id.astype(np.int64))[['NID', 'check_sum', 'checksum']])

@@ -17,6 +17,7 @@ LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\P
 project_details_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\Statistics_of_all_projects.xls"
 unit_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryUnit.zip"
 land_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryLand.zip"
+db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\checksum.zip"
 
 # log_date = st.date_input("Log Date:")
 # log_sum_fn = os.path.join(LOG_SUMMARY_FOLDER,f"log_summary-{log_date.strftime('%Y-%m-%d')}.zip")
@@ -54,10 +55,10 @@ if not selected.empty:
         else:
             if project_type == 1:
                 query_token = "token == 'confirmReservation True'"  
-                db_file_name = unit_db_checksum_fn
+                db_file_name = db_checksum_fn
             else: 
                 query_token = "token == 'confirmLandReservation True'"
-                db_file_name = land_db_checksum_fn
+                db_file_name = db_checksum_fn
             if st.button('Match cheksum'):
                 with st.spinner("Reading log & DB files, please wait ..."):
                     dbdf= load_db_file(db_file_name). query(f"project_id == {project_id}")
@@ -84,7 +85,7 @@ if not selected.empty:
                         else:
                             unit_land = 'land_id'
 
-                        mismatch = mismatch.astype({unit_land: str}).rename({'check_sum':'DB checksum', 'checksum': 'Log checksum'}, axis=1)
+                        mismatch = mismatch.astype({'land_id': str}).rename({'check_sum':'DB checksum', 'checksum': 'Log checksum', 'land_id':unit_land}, axis=1)
                         st.dataframe(mismatch[['NID', unit_land, 'DB checksum', 'Log checksum']])
                       
 

@@ -49,7 +49,7 @@ def yield_zip_file(file_path, file_type):
                 for fname in zf.namelist():
                     f = zf.open(fname) 
                     # print (fname)
-                    yield f
+                    yield f, zipfile.ZipInfo.file_size
             
         case '.gz': # tarfile
             if type(file_path) == str:
@@ -61,8 +61,9 @@ def yield_zip_file(file_path, file_type):
             with tarfile.open(name  = file_name, fileobj = file_obj, mode = "r:gz") as tar:
                 for member in tar.getmembers():
                     f=tar.extractfile(member)
+                    # st.write('file size:', member.size)
                     # print (f.name)
-                    yield f
+                    yield f, member.size
         case '.7z':
             if not os.path.exists(Z7_TMP_DIR):
                 os.mkdir(Z7_TMP_DIR)
@@ -70,8 +71,9 @@ def yield_zip_file(file_path, file_type):
                 zf.extractall(Z7_TMP_DIR)
                 for fname in os.listdir(Z7_TMP_DIR):
                     file_path = os.path.join(Z7_TMP_DIR, fname)
+                    file_size = os.path.getsize()
                     with open(file_path, 'rt', encoding= 'utf8') as f:
-                        yield f
+                        yield f, file_size
                     os.unlink(file_path)
 
 
@@ -101,23 +103,27 @@ def zip_log_to_df(zip_file):
 
     log_pd = pd.DataFrame()
     log_lst = []
-    proj_id_lst = []
+    # proj_id_lst = []
     project_type = None
     placeholder.write("Unzip log file ...")
     zfiles = yield_zip_file(zip_file, file_type)
     placeholder.write("Process log file ...")
-    for f in zfiles:
+    for f, file_size in zfiles:
 
-        # line_count = sum(1 for _ in f)
-        # f.seek(0)
-        f.seek(0,2) # end
-        file_size = f.tell()
+        # # line_count = sum(1 for _ in f)
+        # # f.seek(0)
+        if not file_size:   # file size is retruned from tar, calc it
+            f.seek(0,2) # end
+            file_size = f.tell()
+            # line_count = int(file_size/145)   # avrage 145 bytes/line
+            f.seek(0,0)     # set pointer to beginning of file
+
         line_count = int(file_size/145)   # avrage 145 bytes/line
-        f.seek(0,0)     # set pointer to beginning of file
         # my_prog_bar = st.progress(0, text="")
-        
+       
         # percent_complete = 0
         line_no = 0
+        placeholder.write(f"{line_no:,}/{line_count:,} - {line_no/line_count:.2%}")
         while True:
             txt = f.readline()
             if not txt: break

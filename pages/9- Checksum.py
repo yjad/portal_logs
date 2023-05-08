@@ -88,5 +88,8 @@ if not selected.empty:
                         mismatch = mismatch.astype({'land_id': str}).rename({'check_sum':'DB checksum', 'checksum': 'Log checksum', 'land_id':unit_land}, axis=1)
                         st.dataframe(mismatch[['NID', unit_land, 'DB checksum', 'Log checksum']])
                       
-
-                        
+                    # dfx = (logdf.merge(dbdf, left_on='NID', right_on='applicant_national_id')
+                    #         .dropna(subset='applicant_national_id')
+                    #     )
+                    # st.write("No of reservation rows in logs but not in DB:", dfx.shape[0])
+                    # st.dataframe(dfx)

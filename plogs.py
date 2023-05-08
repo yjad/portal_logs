@@ -282,8 +282,13 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type, project_id, 
     rec_lst = [log_timestamp, None, line_no, nid, log_type, cntry, ip, service, token, error_categ, project_id, task_id, None]
     if service in ('confirmReservation', 'confirmLandReservation'):
         project_type = service
-        # print ("*****", res.get('details'))
-        rec_lst += list(res.get('details').values())
+        # rec_lst += list(res.get('details').values())
+        det_dict = res.get('details')
+        det_lst = list(det_dict.values())
+        if not det_dict.get('Land_ID'): # Land_id does not exist in the details - اراضى تكميلى
+            det_lst.insert(1, None)     # Insert empty item for Land_ID
+
+        rec_lst += det_lst
     else:
         rec_lst = rec_lst + ['' for i in range(11)]
         project_type = None

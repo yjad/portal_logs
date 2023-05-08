@@ -550,7 +550,7 @@ def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int
     zfiles = yield_zip_file(zip_file, file_type)
     # st.write(datetime.now(),'After yield_zip_file ....')
 
-    for f in zfiles:
+    for f, file_size in zfiles:
     # f = zfiles.__next__
         # st.write(datetime.now(),'before line count....')
         # line_count = sum(1 for _ in f)

@@ -48,8 +48,7 @@ def yield_zip_file(file_path, file_type):
             with zipfile.ZipFile(file_path, "r") as zf:
                 for fname in zf.namelist():
                     f = zf.open(fname) 
-                    # print (fname)
-                    yield f, zipfile.ZipInfo.file_size
+                    yield f, zf.infolist()[0].file_size
             
         case '.gz': # tarfile
             if type(file_path) == str:

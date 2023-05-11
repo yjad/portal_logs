@@ -16,8 +16,9 @@ def load_log_file(log_file_path, query):
 project_types = {'وحدات سكنية':1,'أراضى':2, 'مشروع مكمل لأراضى':4}
 LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary"
 project_details_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\Statistics_of_all_projects.xls"
-unit_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryUnit.zip"
-land_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryLand.zip"
+TIBCO_OUT_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum"
+# unit_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryUnit.zip"
+# land_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryLand.zip"
 db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\checksum.zip"
 
 # log_date = st.date_input("Log Date:")
@@ -61,7 +62,8 @@ if not selected.empty:
                 query_token = "token == 'confirmLandReservation True'"
                 db_file_name = db_checksum_fn
             # b1, b2= st.columns(2)
-            option = st.radio("Options: ", ["Match checksum", 'NID Log', 'Match Details(LE04)'], horizontal=True )
+            # option = st.radio("Options: ", ['NID Log', 'Match checksum',  'Match Details(LE04)'], horizontal=True )
+            option = st.radio("Options: ", ['NID Log', 'Match checksum'], horizontal=True )
             # if b1.button('Match cheksum'):
             if option == 'Match checksum':
                 with st.spinner("Reading log & DB files, please wait ..."):
@@ -92,7 +94,7 @@ if not selected.empty:
                       
 
                 if project_type == 1:   # Units
-                    tibco_fn = os.path.join(r"C:\Users\yahia\Downloads", f'UE04_{project_id}.xls')
+                    tibco_fn = os.path.join(TIBCO_OUT_FOLDER, f'UE04_{project_id}.xls')
                     rename_dict = {
                         'رقم الوحدة': 'Unit_No',
                         'رقم العمارة': 'building_no',
@@ -100,7 +102,7 @@ if not selected.empty:
                         'الرقم القومى':'NID'}
                     col_list = [0,2,3,18]
                 else:
-                    tibco_fn = os.path.join(r"C:\Users\yahia\Downloads", f'LE04_{project_id}.xls')
+                    tibco_fn = os.path.join(TIBCO_OUT_FOLDER, f'LE04_{project_id}.xls')
                     rename_dict = {'نسبة التميز': 'excellence_ratio',
                         'مساحة الأرض':'land_size',
                         'رقم الأرض':'Land_No',
@@ -110,7 +112,7 @@ if not selected.empty:
                 if not os.path.exists(tibco_fn):
                     st.error(f"TIBCO file name for this project does not exist: {tibco_fn}")
                 else:
-                    le04 = (pd.read_excel(tibco_fn, skiprows=1, dtype={'الرقم القومى':str})
+                    le04 = (pd.read_excel(tibco_fn, skiprows=1, dtype={'الرقم القومى':str},)
                             .iloc[:,col_list].rename(rename_dict, axis=1))
                     
                     # logdf = load_log_file(log_file_path, query_token) 
@@ -151,7 +153,7 @@ if not selected.empty:
             elif option == 'NID Log':
                 NID = st.text_input("NID: ")
                 if NID:
-                    # query_token += f" and NID == '{NID}'" 
+                    query_token += f" and NID == '{NID}'" 
                     logdf = (load_log_file(log_file_path, query_token)
                                 .query(query_token)
                                 # .drop(columns=['node', 'task_id','project_id', 'error_line'])
@@ -159,6 +161,11 @@ if not selected.empty:
                     if logdf.empty:
                         st.error("National ID does not exisit ...")
                     else:
+                        if project_type == 1:
+                            col_list = ['Floor_No', 'building_no', 'Unit_No', 'Unit_ID']
+                        else:
+                            col_list  = ['Land_No', 'land_size']
+                        logdf[col_list] = logdf[col_list].astype(int)
                         st.dataframe(logdf.T, use_container_width=True)
                 
 

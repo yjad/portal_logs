@@ -32,15 +32,19 @@ projdf = (pd.read_excel(project_details_fn, skiprows=1, usecols=[0,1,2,4, 5, 10]
     .assign (start_date= lambda x: x.start_date.dt.date)
     .assign (end_date= lambda x: x.end_date.dt.date)
     .assign(select=False)
+    .rename(columns={'project_type_name_ar':'proj_type'})
     .sort_values(by='start_date', ascending=False)
 )
+col_list = projdf.columns[:-1].insert(0,'select')
+projdf = projdf[col_list]
+# st.write(col_list)
 selected = st.experimental_data_editor(projdf, height = 200, use_container_width=True).query("select == True")
 if not selected.empty:
     if selected.select.count() > 1:
         st.error("Should select only one row, deselect ...")
     else:
         project_id = selected.index[0]
-        project_type = project_types.get(selected.project_type_name_ar.iloc[0])
+        project_type = project_types.get(selected.proj_type.iloc[0])
         start_date = selected.start_date.iloc[0]
         end_date = selected.end_date.iloc[0]
         # st.write(project_id, project_type, start_date, end_date)

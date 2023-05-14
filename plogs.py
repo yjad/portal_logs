@@ -106,17 +106,18 @@ def zip_log_to_df(zip_file):
     project_type = None
     placeholder.write("Unzip log file ...")
     zfiles = yield_zip_file(zip_file, file_type)
-    placeholder.write("Process log file ...")
+    placeholder.write("Reading log file ...")
     for f, file_size in zfiles:
 
         # # line_count = sum(1 for _ in f)
         # # f.seek(0)
+        # st.write('Get file size ...')
         if not file_size:   # file size is retruned from tar, calc it
             f.seek(0,2) # end
             file_size = f.tell()
             # line_count = int(file_size/145)   # avrage 145 bytes/line
             f.seek(0,0)     # set pointer to beginning of file
-
+        # st.write('End of get file size ...')
         line_count = int(file_size/145)   # avrage 145 bytes/line
         # my_prog_bar = st.progress(0, text="")
        
@@ -176,7 +177,8 @@ def zip_log_to_df(zip_file):
     else:
         try:
             log_pd = pd.DataFrame(log_lst, columns = unit_col)
-        except: # no-reservation day, no details in all log. use mini column list with no details
+        except ValueError: # no-reservation day, no details in all log. use mini column list with no details
+            # pd.DataFrame(log_lst).to_excel('./out/test.xlsx')
             log_pd = pd.DataFrame(log_lst, columns = land_col[:13])
 
     # log_pd.to_csv('./out/log_pd.csv', index=False)
@@ -284,7 +286,7 @@ def parse_nid_rec(txt, line_no, out_error, log_timestamp, log_type, project_id, 
         # rec_lst += list(res.get('details').values())
         det_dict = res.get('details')
         det_lst = list(det_dict.values())
-        if not det_dict.get('Land_ID'): # Land_id does not exist in the details - اراضى تكميلى
+        if service == 'confirmLandReservation' and det_dict.get('Land_ID') == None: # Land_id does not exist in the details - اراضى تكميلى
             det_lst.insert(1, None)     # Insert empty item for Land_ID
 
         rec_lst += det_lst

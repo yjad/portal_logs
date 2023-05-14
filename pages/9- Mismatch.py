@@ -159,12 +159,12 @@ if not selected.empty:
                                 # .drop(columns=['node', 'task_id','project_id', 'error_line'])
                                 )
                     if logdf.empty:
-                        st.error("National ID does not exisit ...")
+                        st.error("National ID does not exist ...")
                     else:
                         if project_type == 1:
                             col_list = ['Floor_No', 'building_no', 'Unit_No', 'Unit_ID']
                         else:
-                            col_list  = ['Land_No', 'land_size']
+                            col_list  = ['Land_No', 'land_size', 'Land_ID']
                         logdf[col_list] = logdf[col_list].astype(int)
                         st.dataframe(logdf.T, use_container_width=True)
                 

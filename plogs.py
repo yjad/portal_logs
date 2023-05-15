@@ -407,11 +407,12 @@ def display_reservation_cntry(df, selected_dts):
     if not df.empty:
         df_pivot = pd.pivot_table(df, index = 'Country', columns='token', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
         df_pivot['NID'] = df[['Country', 'NID']].groupby('Country').nunique()
+        df_pivot['avg'] = (df_pivot.Logins/df_pivot.NID).astype(int)
         df_pivot = df_pivot.sort_values('Logins', ascending=False).reset_index()
-        if len(df_pivot.columns) == 3:
-            df_pivot.columns = ['Country', '# Logins', '# Customers']
+        if len(df_pivot.columns) == 4:
+            df_pivot.columns = ['Country', '# Logins', '# Customers', 'Avg']
         else:
-            df_pivot.columns = ['Country', '# Logins', '# Reservations', '# Customers']
+            df_pivot.columns = ['Country', '# Logins', '# Reservations', '# Customers', 'Avg']
         return df_pivot
 
 

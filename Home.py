@@ -63,3 +63,56 @@ def text_download(lst, index, file_name, link_display_title = 'Download Text Fil
     b64 = base64.b64encode(lst.encode()).decode()  # strings <-> bytes conversions
     href = f'<a href="data:file/csv;base64,{b64}" download="{file_name}">{link_display_title}</a>'
     return href
+
+
+@st.cache_data
+def load_log_file(log_file_path):
+    return (pd.read_csv(log_file_path, low_memory=False, dtype={'NID':str})
+            # .query(query)
+            .drop(columns=['node', 'task_id','project_id', 'error_line']))
+                    
+LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary"
+PROJECT_DETAILS_FN = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\Statistics_of_all_projects.xls"
+PROJECT_TYPES = {'وحدات سكنية':1,'أراضى':2, 'مشروع مكمل لأراضى':4}
+
+def load_log_summary(multi = False):
+    
+    if not os.path.exists(PROJECT_DETAILS_FN):
+        st.error(f"Porjects' details file not exists: {PROJECT_DETAILS_FN}")
+        return pd.DataFrame(), {}
+    
+    projdf = (pd.read_excel(PROJECT_DETAILS_FN, skiprows=1, usecols=[0,1,2,4, 5, 10], index_col=0)
+        .assign (start_date= lambda x: x.start_date.dt.date)
+        .assign (end_date= lambda x: x.end_date.dt.date)
+        .assign(select=False)
+        .rename(columns={'project_type_name_ar':'proj_type'})
+        .sort_values(by='start_date', ascending=False)
+    )
+    col_list = projdf.columns[:-1].insert(0,'select')
+    projdf = projdf[col_list]
+    # st.write(col_list)
+    selected = st.experimental_data_editor(projdf, height = 200, use_container_width=True).query("select == True")
+    if selected.select.count() != 1:
+        st.error("Should select only one row, deselect ...")
+        return pd.DataFrame(), {}   # empty
+    
+    project_id = selected.index[0]
+    project_type = PROJECT_TYPES.get(selected.proj_type.iloc[0])
+    start_date = selected.start_date.iloc[0]
+    end_date = selected.end_date.iloc[0]
+    # st.write(project_id, project_type, start_date, end_date)
+    if start_date != end_date:  # multi-day project
+        lst = pd.date_range(start_date, end_date).date
+        log_date = st.selectbox("Select log date", lst)
+    else:
+        log_date = start_date
+
+    log_file_path = os.path.join(LOG_SUMMARY_FOLDER, f"log summary-{log_date.strftime('%Y-%m-%d')}.zip")
+    # st.write(log_file_path)
+    if not os.path.exists(log_file_path):
+        st.error(f"log file not exists: {log_file_path}")
+        return pd.DataFrame(), {}   # empty
+    
+    logdf = load_log_file(log_file_path)
+    proj_dict = {'project_id':project_id, 'project_type':project_type, 'start_date': start_date, 'end_date': end_date }
+    return logdf, proj_dict

@@ -92,6 +92,8 @@ def load_log_summary(multi = False):
     projdf = projdf[col_list]
     # st.write(col_list)
     selected = st.experimental_data_editor(projdf, height = 200, use_container_width=True).query("select == True")
+    if selected.select.count() == 0:
+        return pd.DataFrame(), None   # empty
     if selected.select.count() != 1:
         st.error("Should select only one row, deselect ...")
         return pd.DataFrame(), {}   # empty

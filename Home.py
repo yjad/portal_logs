@@ -65,18 +65,20 @@ def text_download(lst, index, file_name, link_display_title = 'Download Text Fil
     return href
 
 
-@st.cache_data
+# @st.cache_data
 def load_log_file(log_file_path):
-    return (pd.read_csv(log_file_path, low_memory=False, dtype={'NID':str})
+    return (pd.read_csv(log_file_path,  compression= 'zip', dtype={'NID':'string[pyarrow]'}, engine= 'pyarrow', dtype_backend = 'pyarrow')
+    # return (pd.read_csv(log_file_path, low_memory=False, dtype={'NID':str})
             # .query(query)
+            .assign(NID = lambda x:x.NID.str[:14])   # remove '.0' 
             .drop(columns=['node', 'task_id','project_id', 'error_line']))
-                    
-LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary"
-PROJECT_DETAILS_FN = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\Statistics_of_all_projects.xls"
-PROJECT_TYPES = {'وحدات سكنية':1,'أراضى':2, 'مشروع مكمل لأراضى':4}
+
 
 def load_log_summary(multi = False):
-    
+    LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary"
+    PROJECT_DETAILS_FN = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\Statistics_of_all_projects.xls"
+    PROJECT_TYPES = {'وحدات سكنية':1,'أراضى':2, 'مشروع مكمل لأراضى':4}
+
     if not os.path.exists(PROJECT_DETAILS_FN):
         st.error(f"Porjects' details file not exists: {PROJECT_DETAILS_FN}")
         return pd.DataFrame(), {}
@@ -85,13 +87,14 @@ def load_log_summary(multi = False):
         .assign (start_date= lambda x: x.start_date.dt.date)
         .assign (end_date= lambda x: x.end_date.dt.date)
         .assign(select=False)
-        .rename(columns={'project_type_name_ar':'proj_type'})
+        .rename(columns={'project_type_name_ar':'proj_type', 'No. of reservations':'# Res.'})
         .sort_values(by='start_date', ascending=False)
     )
     col_list = projdf.columns[:-1].insert(0,'select')
     projdf = projdf[col_list]
     # st.write(col_list)
-    selected = st.experimental_data_editor(projdf, height = 200, use_container_width=True).query("select == True")
+    selected = st.experimental_data_editor(projdf, height = 200, width=1200).query("select == True")
+    # selected = st.experimental_data_editor(projdf, height = 200, use_container_width=True).query("select == True")
     if selected.select.count() == 0:
         return pd.DataFrame(), None   # empty
     if selected.select.count() != 1:

@@ -24,6 +24,8 @@ db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Pytho
 
 logdf, proj_dict = stu.load_log_summary(multi=False)
 
+# st.write(proj_dict)
+
 if not logdf.empty :   # a project selected
     project_type = proj_dict['project_type']
     project_id = proj_dict['project_id']
@@ -43,10 +45,11 @@ if not logdf.empty :   # a project selected
             dbdf= load_db_file(db_file_name).query(f"project_id == {project_id}")
             # logdf = load_log_file(log_file_path, query_token)
             logdf = logdf.query(query_token)
-                    
             df = (dbdf.merge(logdf, left_on='applicant_national_id', right_on='NID')
                     .assign(match = lambda x:(x.checksum == x.check_sum))
                 )
+            
+            
             st.write("### Checksum match count")
             if project_type == 1:
                 st.write("Units count - DB: ", dbdf.shape[0])

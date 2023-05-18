@@ -71,7 +71,8 @@ def load_log_file(log_file_path):
     # return (pd.read_csv(log_file_path, low_memory=False, dtype={'NID':str})
             # .query(query)
             .assign(NID = lambda x:x.NID.str[:14])   # remove '.0' 
-            .drop(columns=['node', 'task_id','project_id', 'error_line']))
+            # .drop(columns=['node', 'task_id','project_id', 'error_line']))
+            .dropna(axis=1, how='all'))  # drop empty columns
 
 
 def load_log_summary(multi = False):
@@ -90,22 +91,19 @@ def load_log_summary(multi = False):
         .rename(columns={'project_type_name_ar':'proj_type', 'No. of reservations':'# Res.'})
         .sort_values(by='start_date', ascending=False)
     )
-    col_list = projdf.columns[:-1].insert(0,'select')
+    col_list = projdf.columns[:-1].insert(0,'select')   # insert new colmmn for selection
     projdf = projdf[col_list]
-    # st.write(col_list)
-    selected = st.experimental_data_editor(projdf, height = 200, width=1200).query("select == True")
-    # selected = st.experimental_data_editor(projdf, height = 200, use_container_width=True).query("select == True")
-    if selected.select.count() == 0:
+    selected = st.experimental_data_editor(projdf, height = 200, use_container_width=True).query("select == True")
+    if selected.select.count() == 0:    # no selelction
         return pd.DataFrame(), None   # empty
     if selected.select.count() != 1:
         st.error("Should select only one row, deselect ...")
-        return pd.DataFrame(), {}   # empty
+        return pd.DataFrame(), None   # empty
     
     project_id = selected.index[0]
     project_type = PROJECT_TYPES.get(selected.proj_type.iloc[0])
     start_date = selected.start_date.iloc[0]
     end_date = selected.end_date.iloc[0]
-    # st.write(project_id, project_type, start_date, end_date)
     if start_date != end_date:  # multi-day project
         lst = pd.date_range(start_date, end_date).date
         log_date = st.selectbox("Select log date", lst)
@@ -113,10 +111,9 @@ def load_log_summary(multi = False):
         log_date = start_date
 
     log_file_path = os.path.join(LOG_SUMMARY_FOLDER, f"log summary-{log_date.strftime('%Y-%m-%d')}.zip")
-    # st.write(log_file_path)
     if not os.path.exists(log_file_path):
         st.error(f"log file not exists: {log_file_path}")
-        return pd.DataFrame(), {}   # empty
+        return pd.DataFrame(), None   # empty
     
     logdf = load_log_file(log_file_path)
     proj_dict = {'project_id':project_id, 'project_type':project_type, 'start_date': start_date, 'end_date': end_date }

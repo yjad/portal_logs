@@ -423,8 +423,9 @@ def top_login_customers_during_reservation(df, start_time):
     if start_time:
         df = df[pd.to_datetime(df.log_date) > start_time]
     
-    df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True', 'confirmReservation True']),['NID', 'token', 'dt', 'IP_address']]
-    x = pd.pivot_table(df, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
+    df = df.loc[df.token.isin(['Logins', 'confirmLandReservation True', 'confirmReservation True']),['NID', 'token', 'log_date', 'IP_address']]
+    df.log_date = df.log_date.dt.date 
+    x = pd.pivot_table(df, index= 'NID', columns = 'token', values='log_date', aggfunc='count').sort_values('Logins', ascending= False)
 
     if 'confirmLandReservation True' not in x.columns and 'confirmReservation True' not in x.columns:  # None reservation logs
         x['Reservation'] = ''
@@ -457,7 +458,9 @@ def filter_df(df, selected_dts, selected_tokens):
     return df
 
 def login_stats(df):
-    x = df.loc[df.token.isin(['Logins', 'confirmLandReservation True', 'confirmReservation True']),['NID', 'token', 'dt']]
+    # st.write(df.columns)
+    x = (df.loc[df.token.isin(['Logins', 'confirmLandReservation True', 'confirmReservation True'])]
+         .assign(dt=lambda x: x.log_date.dt.date))[['NID', 'token', 'dt']]
     x = pd.pivot_table(x, index= 'NID', columns = 'token', values='dt', aggfunc='count').sort_values('Logins', ascending= False)
     if 'confirmLandReservation True' not in x.columns and 'confirmReservation True' not in x.columns:
          x['confirmLandReservation True'] = 0

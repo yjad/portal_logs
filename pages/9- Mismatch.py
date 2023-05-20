@@ -66,7 +66,9 @@ if not logdf.empty :   # a project selected
                 else:
                     unit_land = 'land_id'
 
-                mismatch = mismatch.astype({'land_id': str}).rename({'check_sum':'DB checksum', 'checksum': 'Log checksum', 'land_id':unit_land}, axis=1)
+                mismatch = (mismatch.astype({'land_id': str})
+                            .assign(land_id = lambda x: x[unit_land].str[:-2]) # remove ".0" 
+                            .rename({'check_sum':'DB checksum', 'checksum': 'Log checksum', 'land_id':unit_land}, axis=1))
                 st.dataframe(mismatch[['NID', unit_land, 'DB checksum', 'Log checksum']])
                 
 

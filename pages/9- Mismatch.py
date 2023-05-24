@@ -102,10 +102,15 @@ if not logdf.empty :   # a project selected
                         x.Unit_Model_db != x.Unit_Model_log:
                         return False
                 else:
-                    if x.Land_No_db != x.Land_No_log or \
-                        x.land_size_db != x.land_size_log or \
-                        x.excellence_ratio_db != x.excellence_ratio_log:
-                        return False
+                    try:
+                        if x.Land_No_db != x.Land_No_log or \
+                            x.land_size_db != x.land_size_log or \
+                            x.excellence_ratio_db != x.excellence_ratio_log:
+                            return False
+                    except:
+                        # st.write(x)
+                        return (x.Land_No_db == x.Land_No_log)
+                            
                 return True
                     
             # le04.columns
@@ -144,8 +149,14 @@ if not logdf.empty :   # a project selected
                 if project_type == 1:
                     col_list = ['Floor_No', 'building_no', 'Unit_No', 'Unit_ID']
                 else:
+                    
                     col_list  = ['Land_No', 'land_size', 'Land_ID']
-                logdf[col_list] = logdf[col_list].astype(int)
+                    
+                try:
+                    logdf[col_list] = logdf[col_list].astype(int)
+                except:
+                    col_list  = ['Land_No', 'land_size']
+                    logdf[col_list] = logdf[col_list].astype(int)
                 st.dataframe(logdf.T, use_container_width=True)
             
 

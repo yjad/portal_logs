@@ -9,6 +9,8 @@ from csv import QUOTE_ALL
 import plog2
 import streamlit as st
 import py7zr
+import bz2
+
 
 SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary" 
 Z7_TMP_DIR = './out/z7_temp'
@@ -75,6 +77,17 @@ def yield_zip_file(file_path, file_type):
                         yield f, file_size
                     os.unlink(file_path)
 
+        case '.bz2':
+            if not os.path.exists(Z7_TMP_DIR):
+                os.mkdir(Z7_TMP_DIR)
+            with bz2.BZ2File(file_path, mode='r') as bz2f:
+                data = bz2f.read()              # get the decompressed data
+                newfilepath = os.path.join(Z7_TMP_DIR, file_path.name)
+                open(newfilepath, 'wb').write(data) # write an uncompressed file
+                file_size = os.path.getsize(newfilepath)
+                with open(newfilepath, 'rt', encoding= 'utf8') as f:
+                    yield f, file_size
+                os.unlink(newfilepath)
 
 # Process one zip file
 def zip_log_to_df(zip_file):
@@ -538,10 +551,16 @@ def update_summary_db(df):
 
 
 def load_project_table(uploaded_file):
-    df = pd.read_csv(uploaded_file)
-    conn, _ = db.open_db()
-    df.to_sql('project', conn, if_exists='replace')
-    conn.close()
+
+    # df = pd.read_csv(uploaded_file)
+    # conn, _ = db.open_db()
+    # df.to_sql('project', conn, if_exists='replace')
+    # conn.close()
+    df = pd.read_excel(uploaded_file, skiprows=1)
+    df = df[:-1]    # delete last row, it has timestamp of the report
+    df[df.columns[8:12]]  = df[df.columns[8:12]].fillna(0).astype(int) # counts are read as float, convert to int
+    db.save_df(df, tbl_name='project', if_exists='replace')
+    
 
 def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int, no_lines:int):
     # from datetime import datetime

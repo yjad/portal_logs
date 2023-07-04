@@ -115,3 +115,12 @@ def df_to_sql(df, table, if_exists):
     conn, _ = open_db()
     df.to_sql(table, if_exists=if_exists, con=conn)
     conn.close()
+
+def save_df(df, tbl_name, if_exists, index=True):
+    conn, _ = open_db()
+    try:
+        df.to_sql(tbl_name, conn, if_exists = if_exists, index=index)
+    except Exception as err:
+        pass
+    finally:
+        conn.close()

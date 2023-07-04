@@ -1,11 +1,11 @@
 import pandas as pd
 import streamlit as st
 import plogs as logs 
-import Home as stu
+import st_utils as stu
 
 # csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = True)
 # df, dt_from, dt_to, dts = stu.upload_csv_files(csv_files)
-df, proj_dict = stu.load_log_summary(False)
+df, proj_dict, _ = stu.load_log_summary(False)
 
 if not df.empty:  
 

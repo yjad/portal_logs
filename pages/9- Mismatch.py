@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-import Home as stu
+import st_utils as stu
 
 @st.cache_data
 def load_db_file(db_file_path):
@@ -22,13 +22,13 @@ TIBCO_OUT_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Pyt
 # # land_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryLand.zip"
 db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\checksum.zip"
 
-logdf, proj_dict = stu.load_log_summary(multi=False)
+logdf, proj_dict, _ = stu.load_log_summary(multi=False)
 
 # st.write(proj_dict)
 
 if not logdf.empty :   # a project selected
     project_type = proj_dict['project_type']
-    project_id = proj_dict['project_id']
+    project_id = proj_dict['project_id'][0]
 
     if project_type == 1:
         query_token = "token == 'confirmReservation True'"  

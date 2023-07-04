@@ -2,10 +2,10 @@ import os
 import pandas as pd
 import streamlit as st
 import plogs as logs 
-import Home as stu
+import st_utils as stu
 
 def logins_by_country():
-    df, proj_dict = stu.load_log_summary(False)
+    df, proj_dict, _ = stu.load_log_summary(False)
     if not df.empty:
         # selected_dates = st.multiselect('Dates', dts, dts)
         selected_dates=[]
@@ -24,7 +24,7 @@ def logins_by_country():
         st.info('#### No data to display') 
 
 def no_of_logins():
-    df, proj_dict = stu.load_log_summary(False)
+    df, proj_dict, _ = stu.load_log_summary(False)
 
     if not df.empty:
         st.write("### No logins stats")
@@ -51,7 +51,7 @@ def no_of_logins():
 
 
 def res_rate():
-    df, proj_dict = stu.load_log_summary(False)
+    df, proj_dict, _ = stu.load_log_summary(False)
     if df.empty:
         return
     
@@ -82,7 +82,7 @@ def res_rate():
 
 
 def res_by_gov():
-    df, proj_dict = stu.load_log_summary(False)
+    df, proj_dict, _ = stu.load_log_summary(False)
     if df.empty:
         return
     nid_gov = pd.read_csv(r".\portal_gov.csv")[['nid_gov_code', 'portal_gov_name']].drop_duplicates(subset='portal_gov_name')

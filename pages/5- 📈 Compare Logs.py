@@ -2,7 +2,7 @@
 import pandas as pd
 import streamlit as st
 import plogs as logs 
-import Home as stu
+import st_utils as stu
 import DB as db
 from os import path
 
@@ -13,16 +13,19 @@ def load_summary_file(accept_multiple = False):
 
 def log_summary_all():
     # csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = True)
-    csv_files = load_summary_file(accept_multiple = True)
-
-    df, dt_from, dt_to, dts = stu.upload_csv_files(csv_files)
-
-    if not dt_from: 
+    # csv_files = load_summary_file(accept_multiple = True)
+    
+    # df, dt_from, dt_to, dts = stu.upload_csv_files(csv_files)
+    df, proj_dict, dts = stu.load_log_summary(True)
+    
+    if df.empty: 
         st.info('#### No data to display')
         return
+    
+
 
     append_data = False
-    stu.display_data_dates(dt_from, dt_to)
+    stu.display_data_dates(dts[0], dts[-1])
     selected_dates = st.multiselect('Dates', dts, dts)
     tokens = df.token.unique()
     # return All_df[All_df.categ == categ].token.unique()
@@ -30,7 +33,7 @@ def log_summary_all():
     with st.spinner("Please Wait ... "):
         log_stats = logs.get_df_data(df, selected_dates, selected_tokens)
     if not selected_dates:
-        st.markdown (f'#### Log data during {dt_from} to {dt_to}')
+        st.markdown (f'#### Log data during {dts[0]} to {dts[-1]}')
     else:
         st.markdown (f'#### Log data during {selected_dates[0]} to {selected_dates[-1]}')
     st.dataframe(log_stats)
@@ -93,20 +96,26 @@ def log_summary_all():
 
 def tech_log():
     # csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = True)
-    csv_files =load_summary_file(True)
-    if not csv_files:
+    # csv_files =load_summary_file(True)
+    # if not csv_files:
+    #     return
+    
+    # df, _,_, _= stu.upload_csv_files(csv_files)
+    # df = pd.read_csv(csv_files, compression='zip', low_memory=False)
+    df, _, _ = stu.load_log_summary(True)
+    
+    if df.empty: 
+        st.info('#### No data to display')
         return
     
-    df, _,_, _= stu.upload_csv_files(csv_files)
-    # df = pd.read_csv(csv_files, compression='zip', low_memory=False)
-    
-    if df.size == 0: return
 
     df.error_line.fillna(' ', inplace = True)
     # df1 = df.loc[df.categ == 'tech'].pivot_table(index= ['service', 'error_line'], values = 'line_no', columns = 'token', aggfunc='count', fill_value=0)#.to_csv('./out/xxx.csv', index = True)
     # df1 = df.loc[df.categ == 'tech']
-    df1 = df[df.categ == 'tech'][['service',  'token']].groupby('token').aggregate('count').reset_index()
-    df1.rename ({'service':'Count'}, axis=1, inplace=True)
+    df1 = pd.pivot_table(df, index = ['categ','token'], columns='dt', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
+
+    # df1 = df[df.categ == 'tech'][['service',  'token']].groupby('token').aggregate('count').reset_index()
+    # df1.rename ({'service':'Count'}, axis=1, inplace=True)
     st.dataframe(df1)
 
     token_lst = list(df1.reset_index().token.unique())
@@ -117,13 +126,19 @@ def tech_log():
         st.dataframe(df2.reset_index())
 
 def res_rate():
-    csv_files =load_summary_file(True)
-    if not csv_files:
+    # csv_files =load_summary_file(True)
+    # if not csv_files:
+    #     return
+    
+    # # df = pd.read_csv(csv_files, compression='zip', dtype_backend='pyarrow', parse_dates=['log_date'])
+    # df, _,_, _= stu.upload_csv_files(csv_files)
+    # if df.size == 0: return
+    df, _, dts = stu.load_log_summary(True)
+    
+    if df.empty: 
+        st.info('#### No data to display')
         return
     
-    # df = pd.read_csv(csv_files, compression='zip', dtype_backend='pyarrow', parse_dates=['log_date'])
-    df, _,_, _= stu.upload_csv_files(csv_files)
-    if df.size == 0: return
     df = df.assign (log_date = pd.to_datetime(df.log_date))
     # st.write(df.log_date.dtype)
     df = (df
@@ -131,7 +146,7 @@ def res_rate():
             .assign(min = df.log_date.dt.minute)
             .assign(date = df.log_date.dt.date))
 
-    log_file_date = path.split(csv_files[0].name)[1][12:22]
+    # log_file_date = path.split(csv_files[0].name)[1][12:22]
     if df.query("token == 'confirmLandReservation True'").shape[0] != 0: 
         token = 'confirmLandReservation True'
         project_type = 'Land'
@@ -145,7 +160,7 @@ def res_rate():
     df = df.rename({'log_date': '# of reservations'}, axis=1)
     if token:
         fig = df.query(f"token == '{token}'")[['# of reservations', 'hr', 'min',]].groupby(['hr', 'min']).count().\
-            plot(title=f"{project_type} Reservation rate by Hour/Min {log_file_date}", rot=45,figsize=(10,5)).get_figure()
+            plot(title=f"{project_type} Reservation rate by Hour/Min {dts}", rot=45,figsize=(10,5)).get_figure()
         st.pyplot(fig)
     else:
         st.info("## No reservation on that log ...")

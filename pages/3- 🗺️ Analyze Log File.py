@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import streamlit as st
 import plogs as logs 
-import Home as stu
+import st_utils as stu
 
 def logins_by_country():
     df, proj_dict = stu.load_log_summary(False)

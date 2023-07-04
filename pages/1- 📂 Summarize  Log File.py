@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 import plogs as logs 
 import Home as stu
@@ -6,7 +7,7 @@ import Home as stu
 
 
 def summarize_log_file():
-    uploaded_files= st.file_uploader('Select Log file',type=["zip", 'gz', '7z'], accept_multiple_files = False)
+    uploaded_files= st.file_uploader('Select Log file',type=["zip", 'gz', '7z', 'bz2'], accept_multiple_files = False)
     if st.button('Process ...') and uploaded_files:
         with st.spinner("Please Wait ... "):
             logs.summerize_portal_logs(uploaded_files, load_db=False)
@@ -28,7 +29,7 @@ def summarize_log_exceptions_file():
     st.success("File extraced ...")
 
 def load_db_project_table():
-    uploaded_file= st.file_uploader('Select project file',type=["csv"], accept_multiple_files = False)
+    uploaded_file= st.file_uploader('Select project file',type=["xlsx", 'xls'], accept_multiple_files = False)
     if st.button('Process ...') and uploaded_file:
         with st.spinner("Please Wait ... "):
             logs.load_project_table(uploaded_file)
@@ -91,6 +92,54 @@ def quote_log_file():
     #         st.write (lst[:20])
     #         # st.download_button(label = 'Save Quote', data = lst, file_name = 'Login By Country.txt', mime = 'text/csv')
 
+def load_log_summary(multi = False):
+    LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary"
+    # PROJECT_DETAILS_FN = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\Statistics_of_all_projects.xls"
+    PROJECT_TYPES = {'وحدات سكنية':1,'أراضى':2, 'مشروع مكمل لأراضى':4}
+
+    # st.info(f"Loading projects ....")
+
+    # if not os.path.exists(PROJECT_DETAILS_FN):
+    #     st.error(f"Porjects' details file not exists: {PROJECT_DETAILS_FN}")
+    #     return pd.DataFrame(), {}
+    
+    # projdf = (pd.read_excel(PROJECT_DETAILS_FN, skiprows=1, usecols=[0,1,2,4, 5, 10], index_col=0)
+    #     .assign (start_date= lambda x: x.start_date.dt.date)
+    #     .assign (end_date= lambda x: x.end_date.dt.date)
+    #     .assign(select=False)
+    #     .rename(columns={'project_type_name_ar':'proj_type', 'No. of reservations':'# Res.'})
+    #     .sort_values(by='start_date', ascending=False)
+    # )
+    projdf = db.query_to_pd("project")
+    projdf['select'] = False
+    # col_list = projdf.columns[:-1].insert(0,'select')   # insert new colmmn for selection
+    # projdf = projdf[col_list]
+
+    selected = st.data_editor(projdf, height = 200, use_container_width=True).query("select == True")
+    if selected.select.count() == 0:    # no selelction
+        return pd.DataFrame(), None   # empty
+    if selected.select.count() != 1:
+        st.error("Should select only one row, deselect ...")
+        return pd.DataFrame(), None   # empty
+    
+    project_id = selected.index[0]
+    project_type = PROJECT_TYPES.get(selected.proj_type.iloc[0])
+    start_date = selected.start_date.iloc[0]
+    end_date = selected.end_date.iloc[0]
+    if start_date != end_date:  # multi-day project
+        lst = pd.date_range(start_date, end_date).date
+        log_date = st.selectbox("Select log date", lst)
+    else:
+        log_date = start_date
+
+    log_file_path = os.path.join(LOG_SUMMARY_FOLDER, f"log summary-{log_date.strftime('%Y-%m-%d')}.zip")
+    if not os.path.exists(log_file_path):
+        st.error(f"log file not exists: {log_file_path}")
+        return pd.DataFrame(), None   # empty
+    
+    logdf = load_log_file(log_file_path)
+    proj_dict = {'project_id':project_id, 'project_type':project_type, 'start_date': start_date, 'end_date': end_date }
+    return logdf, proj_dict
 
 
 options={   '...':None, 

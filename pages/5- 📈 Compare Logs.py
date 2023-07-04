@@ -2,7 +2,7 @@
 import pandas as pd
 import streamlit as st
 import plogs as logs 
-import Home as stu
+import st_utils as stu
 import DB as db
 from os import path
 

@@ -4,7 +4,7 @@
 from ast import Pass
 import pandas as pd
 import streamlit as st
-from streamlit_option_menu import option_menu
+# from streamlit_option_menu import option_menu
 import plogs as logs 
 import matplotlib.pyplot as plt
 
@@ -19,7 +19,7 @@ UPLOADED_CSV_FILE = None
 #     return st.pyplot(fig)
 
 # @st.cache(suppress_st_warning=True)
-@st.experimental_memo(suppress_st_warning=True)
+# @st.experimental_memo(suppress_st_warning=True)
 def upload_csv_files(csv_files):
     if not csv_files:
         st.warning('No csv files loaded, load files first ...') 

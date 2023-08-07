@@ -36,6 +36,7 @@ def portal_projects():
     .assign(pcnt_res_to_paid  = lambda x: (x['No. of paid customers']/x['No. of applications']*100).fillna(0).astype(int))\
     .assign(paid_to_units_lands = lambda x: (x['No. of paid customers']/x['No. of units/lands']*100).fillna(0).astype(int))
 
+    
     stats_2 = stats_2.rename({
         'no_projects':'عدد المشاريع',
         'No. of units/lands': 'عدد الاراضى/الوحدات المطروحة',
@@ -46,26 +47,29 @@ def portal_projects():
         'pcnt_paid_to_apps': '% جدية الحجز الى الاستمارات',
         'pcnt_res_to_paid': '% الحجز الى من سدد',
     }, axis=1)
-
+    
+    
     stats_2 = stats_2[stats_2.columns[[5,0,1,2,3,4,6,7]]].T     # reorder and transpose
+    # stats_2 = stats.style.format({'% جدية الحجز الى الاستمارات':'{:.0f}%'})
     # st.dataframe(stats_2.T)
 
 
-    st.subheader("Reservation Portal Stats as of "+ logs.get_last_proj_rep_date()[:20])
+    st.subheader("Reservation Portal Stats as of "+ logs.get_last_proj_rep_date()[:19])
     st.dataframe(stats_2)
 
     st.subheader("Reservation Portal Stats-Details")
-    stats = stats.rename({
+    st.dataframe(stats, column_config={
         'no_projects':'عدد المشاريع',
         'No. of units/lands': 'عدد الاراضى/الوحدات المطروحة',
         'No. of applications': 'إجمالى عدد الإستمارات',
         'No. of paid customers': 'عدد من سدد جدية الحجز',
         'No. of reservations': 'عدد الحجوزات',
         'paid_to_units_lands': 'نسبة جدية الحجز الى الوحدات المطروحة',
-        'pcnt_paid_to_apps': '% جدية الحجز الى الاستمارات',
-        'pcnt_res_to_paid': '% الحجز الى من سدد',
-    }, axis=1)
-    st.dataframe(stats)
+        'pcnt_paid_to_apps': st.column_config.NumberColumn(
+            '% جدية الحجز الى الاستمارات', format= "%d%%"),
+        'pcnt_res_to_paid': st.column_config.NumberColumn(
+            '% الحجز الى من سدد', format= "%d%%")
+        })
 
 def open_projects():
     sql = "SELECT * FROM project WHERE publish_date <= CURRENT_DATE AND publish_end_date >= CURRENT_DATE"

@@ -10,7 +10,7 @@ def portal_projects():
     df = df.set_index('project_id', drop=True).sort_values('project_id', ascending=False).drop(columns=['index'])
     # df.columns
     df[df.columns[7:12]]  = df[df.columns[7:12]].fillna(0).astype(int)
-    df = df.drop(columns=['Unnamed: 3', 'Unnamed: 11', 'Unnamed: 13'], axis=1)
+    # df = df.drop(columns=['Unnamed: 3', 'Unnamed: 11', 'Unnamed: 13'], axis=1)
     df = df\
         .assign(pcnt_paid_to_apps = (df['No. of reservations']/df['No. of paid customers']*100).fillna(0).astype(int))\
         .assign(pcnt_res_to_paid = (df['No. of paid customers']/df['No. of applications']*100).fillna(0).astype(int))\
@@ -50,10 +50,11 @@ def portal_projects():
     stats_2 = stats_2[stats_2.columns[[5,0,1,2,3,4,6,7]]].T     # reorder and transpose
     # st.dataframe(stats_2.T)
 
-    st.subheader("Reservation Portal Dashboard")
+
+    st.subheader("Reservation Portal Stats as of "+ logs.get_last_proj_rep_date()[:20])
     st.dataframe(stats_2)
 
-    st.subheader("Reservation Portal Dashboard-Details")
+    st.subheader("Reservation Portal Stats-Details")
     stats = stats.rename({
         'no_projects':'عدد المشاريع',
         'No. of units/lands': 'عدد الاراضى/الوحدات المطروحة',
@@ -66,12 +67,16 @@ def portal_projects():
     }, axis=1)
     st.dataframe(stats)
 
-def protal_stats_1():
-    pass
+def open_projects():
+    sql = "SELECT * FROM project WHERE publish_date <= CURRENT_DATE AND publish_end_date >= CURRENT_DATE"
+    df = db.query_to_pd(sql).drop(columns='index').set_index('project_name_ar').astype(str).T
+    
+    st.subheader("Status of Open Projects as of "+ logs.get_last_proj_rep_date()[:19])
+    st.dataframe(df)
 
 options={'...':None, 
             '1- Portal Projects Dashboard': portal_projects,
-            # '2- Portal Projects Stats-1':protal_stats_1,
+            '2- Open Projects':open_projects,
             # '3- Units- Mismatched Checksum': None,
         }
 

@@ -71,7 +71,7 @@ def protal_stats_1():
 
 options={'...':None, 
             '1- Portal Projects Dashboard': portal_projects,
-            '2- Portal Projects Stats-1':protal_stats_1,
+            # '2- Portal Projects Stats-1':protal_stats_1,
             # '3- Units- Mismatched Checksum': None,
         }
 

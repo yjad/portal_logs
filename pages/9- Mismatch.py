@@ -23,7 +23,7 @@ TIBCO_OUT_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Pyt
 db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\checksum.zip"
 
 logdf, proj_dict, _ = stu.load_log_summary(multi=False)
-
+    
 # st.write(proj_dict)
 
 if not logdf.empty :   # a project selected

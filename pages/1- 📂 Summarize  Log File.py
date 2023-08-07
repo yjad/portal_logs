@@ -32,8 +32,11 @@ def load_db_project_table():
     uploaded_file= st.file_uploader('Select project file',type=["xlsx", 'xls'], accept_multiple_files = False)
     if st.button('Process ...') and uploaded_file:
         with st.spinner("Please Wait ... "):
-            logs.load_project_table(uploaded_file)
-    st.success("File Loaded ...")
+            rep_date = logs.load_project_table(uploaded_file)
+            if rep_date:
+                st.success("File Loaded, rep_date: "+ str(rep_date))
+            else:
+                st.warning("File Already Loaded")
 
 def quote_log_file():
     file_size_option = st.radio("File Size: ",["< 200 MB", "Big file"], horizontal = True)

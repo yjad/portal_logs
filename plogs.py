@@ -552,15 +552,38 @@ def update_summary_db(df):
 
 def load_project_table(uploaded_file):
 
-    # df = pd.read_csv(uploaded_file)
-    # conn, _ = db.open_db()
-    # df.to_sql('project', conn, if_exists='replace')
-    # conn.close()
     df = pd.read_excel(uploaded_file, skiprows=1)
-    df = df[:-1]    # delete last row, it has timestamp of the report
-    df[df.columns[8:12]]  = df[df.columns[8:12]].fillna(0).astype(int) # counts are read as float, convert to int
-    db.save_df(df, tbl_name='project', if_exists='replace')
+    rep_date = df.iloc[-1]['project_id']
+   
+    last_rep_date = get_last_proj_rep_date()
+    # print('********', rep_date, type(rep_date), last_rep_date, type(last_rep_date))
+    if last_rep_date and last_rep_date == str(rep_date):
+        # print ("File Already Loaded, ", "****", rep_date, last_rep_date)
+        return None # file already loaded
+    else:
+        df = df[:-1]    # delete last row, it has timestamp of the report
+        df[df.columns[8:12]]  = df[df.columns[8:12]].fillna(0).astype(int) # counts are read as float, convert to int
+        df.publish_date = df.publish_date.dt.strftime('%Y-%m-%d')
+        df.publish_end_date = df.publish_end_date.dt.strftime('%Y-%m-%d')
+        df.start_date = df.start_date.dt.strftime('%Y-%m-%d')
+        df.end_date = df.end_date.dt.strftime('%Y-%m-%d')
+        df = df.drop(columns=['Unnamed: 3', 'Unnamed: 11', 'Unnamed: 13'], axis=1)
+        db.save_df(df, tbl_name='project', if_exists='replace')
+
+        rep_date_df = pd.DataFrame(data=[rep_date], columns=['rep_date']).set_index('rep_date')
+        # print ("rep_date_df ****:\n", rep_date_df)
+        db.df_to_sql(rep_date_df, table = 'project_rep_date', if_exists='append')
+        return rep_date
     
+
+def get_last_proj_rep_date():
+    sql = "SELECT rep_date FROM project_rep_date ORDER BY rep_date DESC LIMIT 1"
+    last_rep_date = db.query_to_list(sql, return_header=False)
+    if last_rep_date:
+        return last_rep_date[0][0]
+    else:
+        return None
+
 
 def quote_log_file(zip_file, option: int, quote:str, from_line:int, to_line: int, no_lines:int):
     # from datetime import datetime

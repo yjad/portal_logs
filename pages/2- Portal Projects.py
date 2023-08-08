@@ -11,11 +11,11 @@ def portal_projects():
     # df.columns
     df[df.columns[7:12]]  = df[df.columns[7:12]].fillna(0).astype(int)
     # df = df.drop(columns=['Unnamed: 3', 'Unnamed: 11', 'Unnamed: 13'], axis=1)
+
     df = df\
-        .assign(pcnt_paid_to_apps = (df['No. of reservations']/df['No. of paid customers']*100).fillna(0).astype(int))\
-        .assign(pcnt_res_to_paid = (df['No. of paid customers']/df['No. of applications']*100).fillna(0).astype(int))\
-        .assign(pcnt_res_to_paid = (df['No. of paid customers']/df['No. of applications']*100).fillna(0).astype(int))\
-        .assign(paid_to_units_lands = (df['No. of paid customers']/df['No. of units/lands']*100).fillna(0).astype(int))
+        .assign(pcnt_res_to_paid= (df['No. of reservations']/df['No. of paid customers']*100).fillna(0).astype(int))\
+        .assign(pcnt_paid_to_apps= (df['No. of paid customers']/df['No. of applications']*100).fillna(0).astype(int))\
+        .assign(paid_to_units_lands= (df['No. of paid customers']/df['No. of units/lands']*100).fillna(0).astype(int))
     # df.columns
     # df
     col_list = [0, 1, 6, 7,8,9,10,11,12]
@@ -31,12 +31,10 @@ def portal_projects():
     
     stats_2.loc['الإجمالى'] = stats_2.sum() 
 
-
-
     stats_2 = stats_2\
-    .assign(pcnt_paid_to_apps = lambda x:(x['No. of reservations']/x['No. of paid customers']*100).fillna(0).astype(int))\
-    .assign(pcnt_res_to_paid  = lambda x: (x['No. of paid customers']/x['No. of applications']*100).fillna(0).astype(int))\
-    .assign(paid_to_units_lands = lambda x: (x['No. of paid customers']/x['No. of units/lands']*100).fillna(0).astype(int))
+    .assign(pcnt_res_to_paid= lambda x:(x['No. of reservations']/x['No. of paid customers']*100).fillna(0).astype(int))\
+    .assign(pcnt_paid_to_apps= lambda x: (x['No. of paid customers']/x['No. of applications']*100).fillna(0).astype(int))\
+    .assign(paid_to_units_lands= lambda x: (x['No. of paid customers']/x['No. of units/lands']*100).fillna(0).astype(int))
 
     
     stats_2 = stats_2.rename({
@@ -55,7 +53,7 @@ def portal_projects():
     # stats_2 = stats.style.format({'% جدية الحجز الى الاستمارات':'{:.0f}%'})
     # st.dataframe(stats_2.T)
     ## Add % sign to 2 pcnt fields 
-    for i in range (6,8):
+    for i in range (5,8):
         for j in range(0,4):
             stats_2.iloc[i,j] = f"{stats_2.iloc[i,j]}%"
 
@@ -69,7 +67,8 @@ def portal_projects():
         'No. of applications': 'إجمالى عدد الإستمارات',
         'No. of paid customers': 'عدد من سدد جدية الحجز',
         'No. of reservations': 'عدد الحجوزات',
-        'paid_to_units_lands': 'نسبة جدية الحجز الى الوحدات المطروحة',
+        'paid_to_units_lands': st.column_config.NumberColumn(
+            '% جدية الحجز الى الوحدات المطروحة', format= "%d%%"),
         'pcnt_paid_to_apps': st.column_config.NumberColumn(
             '% جدية الحجز الى الاستمارات', format= "%d%%"),
         'pcnt_res_to_paid': st.column_config.NumberColumn(

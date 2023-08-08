@@ -31,6 +31,8 @@ def portal_projects():
     
     stats_2.loc['الإجمالى'] = stats_2.sum() 
 
+
+
     stats_2 = stats_2\
     .assign(pcnt_paid_to_apps = lambda x:(x['No. of reservations']/x['No. of paid customers']*100).fillna(0).astype(int))\
     .assign(pcnt_res_to_paid  = lambda x: (x['No. of paid customers']/x['No. of applications']*100).fillna(0).astype(int))\
@@ -52,7 +54,10 @@ def portal_projects():
     stats_2 = stats_2[stats_2.columns[[5,0,1,2,3,4,6,7]]].T     # reorder and transpose
     # stats_2 = stats.style.format({'% جدية الحجز الى الاستمارات':'{:.0f}%'})
     # st.dataframe(stats_2.T)
-
+    ## Add % sign to 2 pcnt fields 
+    for i in range (6,8):
+        for j in range(0,4):
+            stats_2.iloc[i,j] = f"{stats_2.iloc[i,j]}%"
 
     st.subheader("Reservation Portal Stats as of "+ logs.get_last_proj_rep_date()[:19])
     st.dataframe(stats_2)

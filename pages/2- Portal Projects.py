@@ -54,7 +54,7 @@ def portal_projects():
     # st.dataframe(stats_2.T)
 
 
-    st.subheader("Reservation Portal Stats as of "+ logs.get_last_proj_rep_date()[:19])
+    st.subheader("Reservation Portal Stats as of "+ logs.get_last_proj_rep_date()[:20])
     st.dataframe(stats_2)
 
     st.subheader("Reservation Portal Stats-Details")

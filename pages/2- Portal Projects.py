@@ -4,8 +4,7 @@ import DB as db
 import Home as stu
 import pandas as pd
 
-
-def portal_projects():
+def proj_stats():
     df = db.query_to_pd('project')
     df = df.set_index('project_id', drop=True).sort_values('project_id', ascending=False).drop(columns=['index'])
     # df.columns
@@ -16,6 +15,12 @@ def portal_projects():
         .assign(pcnt_res_to_paid= (df['No. of reservations']/df['No. of paid customers']*100).fillna(0).astype(int))\
         .assign(pcnt_paid_to_apps= (df['No. of paid customers']/df['No. of applications']*100).fillna(0).astype(int))\
         .assign(paid_to_units_lands= (df['No. of paid customers']/df['No. of units/lands']*100).fillna(0).astype(int))
+    
+    return df
+
+def portal_projects():
+    
+    df = proj_stats()
     # df.columns
     # df
     col_list = [0, 1, 6, 7,8,9,10,11,12]
@@ -77,10 +82,43 @@ def portal_projects():
 
 def open_projects():
     sql = "SELECT * FROM project WHERE publish_date <= CURRENT_DATE AND publish_end_date >= CURRENT_DATE"
-    df = db.query_to_pd(sql).drop(columns='index').set_index('project_name_ar').astype(str).T
+    df = db.query_to_pd(sql).drop(columns='index').set_index('project_name_ar')
     
     st.subheader("Status of Open Projects as of "+ logs.get_last_proj_rep_date()[:19])
-    st.dataframe(df)
+   
+
+    # ------------------------------------------------------------------------------------
+    dfall = proj_stats()
+    dfall= dfall.\
+        loc[dfall.project_type_name_ar == df.project_type_name_ar[0]] \
+        [['No. of reservations','No. of paid customers', 'No. of applications', 'No. of units/lands']]\
+        .sum().astype(int)
+    dfall['pcnt_res_to_paid']= int(dfall['No. of reservations']/dfall['No. of paid customers']*100)
+    dfall['pcnt_paid_to_apps']= int(dfall['No. of paid customers']/dfall['No. of applications']*100)
+    dfall['paid_to_units_lands']= int (dfall['No. of paid customers']/dfall['No. of units/lands']*100)
+    
+    st.dataframe(df.astype(str).T)
+    df = df\
+        .assign(pcnt_res_to_paid= lambda x:(x['No. of reservations']/x['No. of paid customers']*100).fillna(0).astype(int))\
+        .assign(pcnt_paid_to_apps= lambda x: (x['No. of paid customers']/x['No. of applications']*100).fillna(0).astype(int))\
+        .assign(paid_to_units_lands= lambda x: (x['No. of paid customers']/x['No. of units/lands']*100).fillna(0).astype(int))
+    
+
+
+    
+    
+    # dfall['paid_to_units_lands']
+    col = st.columns(3)
+    col[0].metric('% جدية الحجز الى الوحدات المطروحة', 
+                  str(df.paid_to_units_lands[0])+'%', 
+                  delta= str(int(df.paid_to_units_lands[0] - dfall['paid_to_units_lands']))+"%")
+    col[1].metric('% جدية الحجز الى الاستمارات',
+                  str(df.pcnt_paid_to_apps[0])+'%', 
+                  delta= str(int(df.pcnt_paid_to_apps[0] - dfall['pcnt_paid_to_apps']))+"%")
+    col[2].metric('% الحجز الى من سدد', 
+                  str(df.pcnt_res_to_paid[0])+'%',
+                  delta= str(int(df.pcnt_res_to_paid[0] - dfall['pcnt_res_to_paid']))+"%")
+                  
 
 options={'...':None, 
             '1- Portal Projects Dashboard': portal_projects,

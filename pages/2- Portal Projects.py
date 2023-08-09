@@ -26,15 +26,15 @@ def portal_projects():
     # st.dataframe(stats.groupby('project_type_name_ar').count()['project_name_ar'])
 
     stats_2 = stats.drop(columns=['project_name_ar', 'pcnt_paid_to_apps', 'pcnt_paid_to_apps', 'pcnt_res_to_paid' ])\
-    .groupby('project_type_name_ar').sum().astype(int)\
-    .assign(no_projects = df.groupby('project_type_name_ar').count()['project_name_ar'])\
+        .groupby('project_type_name_ar').sum().astype(int)\
+        .assign(no_projects = df.groupby('project_type_name_ar').count()['project_name_ar'])\
     
     stats_2.loc['الإجمالى'] = stats_2.sum() 
 
     stats_2 = stats_2\
-    .assign(pcnt_res_to_paid= lambda x:(x['No. of reservations']/x['No. of paid customers']*100).fillna(0).astype(int))\
-    .assign(pcnt_paid_to_apps= lambda x: (x['No. of paid customers']/x['No. of applications']*100).fillna(0).astype(int))\
-    .assign(paid_to_units_lands= lambda x: (x['No. of paid customers']/x['No. of units/lands']*100).fillna(0).astype(int))
+        .assign(pcnt_res_to_paid= lambda x:(x['No. of reservations']/x['No. of paid customers']*100).fillna(0).astype(int))\
+        .assign(pcnt_paid_to_apps= lambda x: (x['No. of paid customers']/x['No. of applications']*100).fillna(0).astype(int))\
+        .assign(paid_to_units_lands= lambda x: (x['No. of paid customers']/x['No. of units/lands']*100).fillna(0).astype(int))
 
     
     stats_2 = stats_2.rename({
@@ -43,7 +43,7 @@ def portal_projects():
         'No. of applications': 'إجمالى عدد الإستمارات',
         'No. of paid customers': 'عدد من سدد جدية الحجز',
         'No. of reservations': 'عدد الحجوزات',
-        'paid_to_units_lands': 'نسبة جدية الحجز الى الوحدات المطروحة',
+        'paid_to_units_lands': '% جدية الحجز الى الوحدات المطروحة',
         'pcnt_paid_to_apps': '% جدية الحجز الى الاستمارات',
         'pcnt_res_to_paid': '% الحجز الى من سدد',
     }, axis=1)
@@ -58,7 +58,7 @@ def portal_projects():
             stats_2.iloc[i,j] = f"{stats_2.iloc[i,j]}%"
 
     st.subheader("Reservation Portal Stats as of "+ logs.get_last_proj_rep_date()[:19])
-    st.dataframe(stats_2)
+    st.dataframe(stats_2.astype(str))
 
     st.subheader("Reservation Portal Stats-Details")
     st.dataframe(stats, column_config={

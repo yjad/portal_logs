@@ -88,7 +88,7 @@ def open_projects():
    
 
     # ------------------------------------------------------------------------------------
-    dfall = proj_stats()
+    dfall = proj_stats().dropna(subset='No. of reservations')
     dfall= dfall.\
         loc[dfall.project_type_name_ar == df.project_type_name_ar[0]] \
         [['No. of reservations','No. of paid customers', 'No. of applications', 'No. of units/lands']]\
@@ -119,6 +119,8 @@ def open_projects():
                   str(df.pcnt_res_to_paid[0])+'%',
                   delta= str(int(df.pcnt_res_to_paid[0] - dfall['pcnt_res_to_paid']))+"%")
                   
+
+open_projects()
 
 options={'...':None, 
             '1- Portal Projects Dashboard': portal_projects,

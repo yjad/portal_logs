@@ -17,10 +17,10 @@ def load_db_file(db_file_path):
 # project_types = {'وحدات سكنية':1,'أراضى':2, 'مشروع مكمل لأراضى':4}
 # LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary"
 # project_details_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\Statistics_of_all_projects.xls"
-TIBCO_OUT_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum"
+TIBCO_OUT_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\checksum"
 # # unit_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryUnit.zip"
 # # land_db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\NewQueryLand.zip"
-db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\checksum.zip"
+db_checksum_fn = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\checksum\checksum.zip"
 
 logdf, proj_dict, _ = stu.load_log_summary(multi=False)
     

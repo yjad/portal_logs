@@ -129,13 +129,26 @@ def res_by_gov():
 )
     st.dataframe(dfoo)
 
- 
+def log_details_by_NID():
+    df, _, _ = stu.load_log_summary(False)
+    NID = st.text_input("National ID", placeholder="National ID")
+    if st.button('List') and df.shape[0] != 0 and len(NID) != 0:
+        # df.NID = df.NID.astype(str)
+        # st.write(str(df.NID[0]))
+        # NID_df = df.query(f"NID == {df.NID[0]}")
+        q= f"NID == '{NID}'"
+        NID_df = df.query(q)[['log_date', 'NID', 'IP_address', 'token']]
+        st.dataframe(NID_df)
+        st.download_button(label = 'Save to csv', data = stu.convert_df(NID_df), file_name = f'log_data_NID_{NID}.csv', mime = 'text/csv')
+
+
 
 options={   '...':None, 
             '1- Logins by country': logins_by_country,
             '2- # of logins ': no_of_logins, 
             "3- Reservation Rate": res_rate, 
             "4- Reservation by birth Governrate": res_by_gov,
+            "4- Log Details by NID": log_details_by_NID,
         }
 
 opt = st.sidebar.selectbox("Options",options.keys())

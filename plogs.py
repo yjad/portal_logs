@@ -12,7 +12,7 @@ import py7zr
 import bz2
 
 
-SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary" 
+SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\summary" 
 Z7_TMP_DIR = './out/z7_temp'
 
 # from numpy import int32
@@ -111,7 +111,7 @@ def zip_log_to_df(zip_file):
             file_type = os.path.splitext(log_files[0])[1]
     else:   # buffer of one or more files
         file_type = os.path.splitext(zip_file.name)[1]
-        # print (log_file.name)
+        # print (zip_file.name)
 
     log_pd = pd.DataFrame()
     log_lst = []

@@ -120,7 +120,7 @@ def open_projects():
                   delta= str(int(df.pcnt_res_to_paid[0] - dfall['pcnt_res_to_paid']))+"%")
                   
 
-open_projects()
+# open_projects()
 
 options={'...':None, 
             '1- Portal Projects Dashboard': portal_projects,

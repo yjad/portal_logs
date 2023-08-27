@@ -131,16 +131,27 @@ def res_by_gov():
 
 def log_details_by_NID():
     df, _, _ = stu.load_log_summary(False)
-    if df.shape[0] != 0:    
-        search_by =st.radio("Search By", ["National ID", "IP Address"], horizontal=True)
-        if search_by:
-            NID = st.text_input('xxx', placeholder=search_by, label_visibility='hidden')
-            if st.button('List') and len(NID) != 0:
-                col = 'NID' if search_by ==  "National ID" else 'IP_address'
-                qry= f"{col} == '{NID}'"
-                NID_df = df.query(qry)[['log_date', 'NID', 'IP_address', 'token']]
-                st.dataframe(NID_df)
-                st.download_button(label = 'Save to csv', data = stu.convert_df(NID_df), file_name = f'log_data_NID_{NID}.csv', mime = 'text/csv')
+<<<<<<<<< Temporary merge branch 1
+    NID = st.text_input("National ID", placeholder="National ID")
+    if st.button('List') and df.shape[0] != 0 and len(NID) != 0:
+        # df.NID = df.NID.astype(str)
+        # st.write(str(df.NID[0]))
+        # NID_df = df.query(f"NID == {df.NID[0]}")
+        q= f"NID == '{NID}'"
+=========
+    search_by =st.radio("Search By", ["National ID", "IP Address"], horizontal=True)
+    NID = st.text_input('xxx', placeholder=search_by, label_visibility='hidden')
+    if st.button('List') and df.shape[0] != 0 and len(NID) != 0:
+        if search_by ==  "National ID":
+            col = 'NID'
+        else:
+            col = 'IP_address'
+        
+        q= f"{col} == '{NID}'"
+>>>>>>>>> Temporary merge branch 2
+        NID_df = df.query(q)[['log_date', 'NID', 'IP_address', 'token']]
+        st.dataframe(NID_df)
+        st.download_button(label = 'Save to csv', data = stu.convert_df(NID_df), file_name = f'log_data_NID_{NID}.csv', mime = 'text/csv')
 
 
 options={   '...':None, 

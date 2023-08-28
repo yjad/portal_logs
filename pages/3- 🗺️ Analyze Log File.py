@@ -3,6 +3,7 @@ import pandas as pd
 import streamlit as st
 import plogs as logs 
 import st_utils as stu
+import DB as db
 
 def logins_by_country():
     df, proj_dict, _ = stu.load_log_summary(False)
@@ -45,9 +46,6 @@ def no_of_logins():
         # df['NID'] = df['NID'].astype(str)   # convert long NID to string
         # df['# Logins'] = df['# Logins'].astype(int)   # convert long NID to string
         st.download_button(label = 'Save to csv', data = stu.convert_df(df1[:no_of_recs]), file_name = 'Top customers # of logins.csv', mime = 'text/csv')
-
-        
-
 
 
 def res_rate():
@@ -131,27 +129,40 @@ def res_by_gov():
 
 def log_details_by_NID():
     df, _, _ = stu.load_log_summary(False)
-<<<<<<<<< Temporary merge branch 1
-    NID = st.text_input("National ID", placeholder="National ID")
-    if st.button('List') and df.shape[0] != 0 and len(NID) != 0:
-        # df.NID = df.NID.astype(str)
-        # st.write(str(df.NID[0]))
-        # NID_df = df.query(f"NID == {df.NID[0]}")
-        q= f"NID == '{NID}'"
-=========
-    search_by =st.radio("Search By", ["National ID", "IP Address"], horizontal=True)
-    NID = st.text_input('xxx', placeholder=search_by, label_visibility='hidden')
-    if st.button('List') and df.shape[0] != 0 and len(NID) != 0:
-        if search_by ==  "National ID":
-            col = 'NID'
-        else:
-            col = 'IP_address'
+    if df.shape[0] != 0 :
+        search_by =st.radio("Search By", ["National ID", "IP Address"], horizontal=True)
+        NID = st.text_input('xxx', placeholder=search_by, label_visibility='hidden')
+        if st.button('List') and df.shape[0] != 0 and len(NID) != 0:
+            if search_by ==  "National ID":
+                col = 'NID'
+            else:
+                col = 'IP_address'
         
-        q= f"{col} == '{NID}'"
->>>>>>>>> Temporary merge branch 2
-        NID_df = df.query(q)[['log_date', 'NID', 'IP_address', 'token']]
-        st.dataframe(NID_df)
-        st.download_button(label = 'Save to csv', data = stu.convert_df(NID_df), file_name = f'log_data_NID_{NID}.csv', mime = 'text/csv')
+            q= f"{col} == '{NID}'"
+
+            NID_df = df.query(q)[['log_date', 'NID', 'IP_address', 'token']]
+            st.dataframe(NID_df)
+            st.download_button(label = 'Save to csv', data = stu.convert_df(NID_df), file_name = f'log_data_NID_{NID}.csv', mime = 'text/csv')
+
+def log_DB_logins():
+    st.subheader('# of Logins/# of Paid Customers')
+    log_df, proj_dict, _ = stu.load_log_summary(False) # 
+    if log_df.shape[0] != 0 :
+        
+        df = log_df.token.value_counts()
+        no_logins = df.loc['Logins']
+        proj_id = proj_dict['project_id'][0]
+        df = db.query_to_pd(f"select * from project where project_id = {proj_id}")
+
+        
+        # st.write(pd.DataFrame(proj_dict))
+        no_paid_customers = df.iloc[0,10]
+        ratios = {'proj_id':proj_id, 'no_logins':no_logins, 
+                   'no_paid_customers':no_paid_customers, 
+                   'ratio': int(no_logins/no_paid_customers)}
+       
+        df = pd.DataFrame(ratios,  index=[0]).set_index('proj_id')
+        df
 
 
 options={   '...':None, 
@@ -159,7 +170,8 @@ options={   '...':None,
             '2- # of logins ': no_of_logins, 
             "3- Reservation Rate": res_rate, 
             "4- Reservation by birth Governrate": res_by_gov,
-            "4- Log Details by NID": log_details_by_NID,
+            "5- Search Log by NID": log_details_by_NID,
+            "6- # of Logins/# of Paid Customers": log_DB_logins,
         }
 
 opt = st.sidebar.selectbox("Options",options.keys())

@@ -502,7 +502,8 @@ def plot_log_summary(df, selected_dts, selected_tokens):
 
     dfx = filter_df(df, selected_dts, selected_tokens)
 
-    dfx = dfx[['dt', 'token', 'line_no']][dfx.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False)
+    # dfx = dfx[['dt', 'token', 'line_no']][dfx.categ == 'user'].groupby(['dt','token']).count().sort_values('line_no', ascending=False)
+    dfx = dfx[['dt', 'token', 'line_no']].groupby(['dt','token']).count().sort_values('line_no', ascending=False)
     dfx = dfx.rename(columns={'line_no':'Count'}).reset_index()
     
     

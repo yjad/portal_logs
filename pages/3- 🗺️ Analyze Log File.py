@@ -163,9 +163,50 @@ def log_DB_logins():
        
         df = pd.DataFrame(ratios,  index=[0]).set_index('proj_id')
         df
+        
+def analyze_tech_log():
+    # csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = True)
+    # csv_files =load_summary_file(True)
+    # if not csv_files:
+    #     return
+    
+    # df, _,_, _= stu.upload_csv_files(csv_files)
+    # df = pd.read_csv(csv_files, compression='zip', low_memory=False)
+    if st.checkbox("Reservation Log?",value=True):
+        df, _, _ = stu.load_log_summary(True)
+        
+        if df.empty: 
+            st.info('#### No data to display')
+            return
+    else:
+        log_file_path = st.file_uploader("Select log file:", ["zip"], accept_multiple_files=False)
+        if log_file_path:
+            df = stu.load_log_file(log_file_path)
+        else:
+            return
+    df.error_line.fillna(' ', inplace = True)
+    # df1 = df.loc[df.categ == 'tech'].pivot_table(index= ['service', 'error_line'], values = 'line_no', columns = 'token', aggfunc='count', fill_value=0)#.to_csv('./out/xxx.csv', index = True)
+    # df1 = df.loc[df.categ == 'tech']
+    df1 = pd.pivot_table(df, index = ['categ','token'], columns='dt', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
 
+    # df1 = df[df.categ == 'tech'][['service',  'token']].groupby('token').aggregate('count').reset_index()
+    # df1.rename ({'service':'Count'}, axis=1, inplace=True)
+    df1 = df1.assign(Select = False)
+    need_details = st.data_editor(df1.reset_index())#, hide_index=True)
+    opt= need_details.loc[need_details["Select"]==True]['token']
+    if not opt.empty:
+        df2 = df.loc[df.token == opt.iloc[0], ['service', 'log_date', 'error_line']].\
+            groupby(['service', 'error_line']).\
+            aggregate('count').sort_values('log_date', ascending=False).\
+            assign (get_details = False)
+        # st.dataframe(df2.reset_index())
+        edited_df = st.data_editor(df2.reset_index())
+        service = edited_df.loc[edited_df["get_details"]==True]['service']
+        if not service.empty:
+            st.dataframe(df.loc[df.service == service.iloc[0]])
 
 options={   '...':None, 
+            '0- Analyze log file': analyze_tech_log,
             '1- Logins by country': logins_by_country,
             '2- # of logins ': no_of_logins, 
             "3- Reservation Rate": res_rate, 

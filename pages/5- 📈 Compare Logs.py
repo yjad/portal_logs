@@ -94,36 +94,7 @@ def log_summary_all():
 
 
 
-def tech_log():
-    # csv_files= st.file_uploader('Select Log summary file',type=["zip"], accept_multiple_files = True)
-    # csv_files =load_summary_file(True)
-    # if not csv_files:
-    #     return
-    
-    # df, _,_, _= stu.upload_csv_files(csv_files)
-    # df = pd.read_csv(csv_files, compression='zip', low_memory=False)
-    df, _, _ = stu.load_log_summary(True)
-    
-    if df.empty: 
-        st.info('#### No data to display')
-        return
-    
 
-    df.error_line.fillna(' ', inplace = True)
-    # df1 = df.loc[df.categ == 'tech'].pivot_table(index= ['service', 'error_line'], values = 'line_no', columns = 'token', aggfunc='count', fill_value=0)#.to_csv('./out/xxx.csv', index = True)
-    # df1 = df.loc[df.categ == 'tech']
-    df1 = pd.pivot_table(df, index = ['categ','token'], columns='dt', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
-
-    # df1 = df[df.categ == 'tech'][['service',  'token']].groupby('token').aggregate('count').reset_index()
-    # df1.rename ({'service':'Count'}, axis=1, inplace=True)
-    st.dataframe(df1)
-
-    token_lst = list(df1.reset_index().token.unique())
-    token_lst.insert(0, '...')
-    opt = st.selectbox("Select token for details:", token_lst)
-    if opt != '...':
-        df2 = df.loc[df.token == opt, ['service', 'log_date', 'error_line']].groupby(['service', 'error_line']).aggregate('count').sort_values('log_date', ascending=False)
-        st.dataframe(df2.reset_index())
 
 def res_rate():
     # csv_files =load_summary_file(True)
@@ -217,7 +188,7 @@ def res_by_gov():
 
 options={   '...':None, 
             '1- Log Summary all': log_summary_all,
-            '2- Tech log stats ': tech_log, 
+            # '2- Tech log stats ': tech_log, 
             # '3- Summarize log exception file': summarize_log_exceptions_file,
             # "4- Load Portal Projects' Data": load_db_project_table 
             "3- Reservation Rate": res_rate, 

@@ -172,7 +172,7 @@ def analyze_tech_log():
     
     # df, _,_, _= stu.upload_csv_files(csv_files)
     # df = pd.read_csv(csv_files, compression='zip', low_memory=False)
-    if st.checkbox("Reservation Log?",value=True):
+    if st.checkbox("Reservation Log?",value=False):
         df, _, _ = stu.load_log_summary(True)
         
         if df.empty: 
@@ -185,13 +185,11 @@ def analyze_tech_log():
         else:
             return
     df.error_line.fillna(' ', inplace = True)
-    # df1 = df.loc[df.categ == 'tech'].pivot_table(index= ['service', 'error_line'], values = 'line_no', columns = 'token', aggfunc='count', fill_value=0)#.to_csv('./out/xxx.csv', index = True)
-    # df1 = df.loc[df.categ == 'tech']
     df1 = pd.pivot_table(df, index = ['categ','token'], columns='dt', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
-
-    # df1 = df[df.categ == 'tech'][['service',  'token']].groupby('token').aggregate('count').reset_index()
-    # df1.rename ({'service':'Count'}, axis=1, inplace=True)
-    df1 = df1.assign(Select = False)
+    
+    dt_header = df1.columns[0]
+    df1 = df1.assign(Select = False).\
+        rename(columns={dt_header:str(dt_header)}) # remove error of columns as date
     need_details = st.data_editor(df1.reset_index())#, hide_index=True)
     opt= need_details.loc[need_details["Select"]==True]['token']
     if not opt.empty:
@@ -199,7 +197,6 @@ def analyze_tech_log():
             groupby(['service', 'error_line']).\
             aggregate('count').sort_values('log_date', ascending=False).\
             assign (get_details = False)
-        # st.dataframe(df2.reset_index())
         edited_df = st.data_editor(df2.reset_index())
         st.download_button(label = 'Save to csv', data = stu.convert_df(df2), 
                                                                         file_name = 'log exceptions.csv', mime = 'text/csv')

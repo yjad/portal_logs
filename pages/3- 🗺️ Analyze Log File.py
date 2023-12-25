@@ -179,17 +179,20 @@ def analyze_tech_log():
             st.info('#### No data to display')
             return
     else:
-        log_file_path = st.file_uploader("Select log file:", ["zip"], accept_multiple_files=False)
-        if log_file_path:
-            df = stu.load_log_file(log_file_path)
+        # log_file_path = st.file_uploader("Select log file:", ["zip"], accept_multiple_files=False)
+        log_date = st.date_input("Select log date:", value=None)
+        if log_date:
+            df = stu.load_summary_log_date(log_date)
+            if df.empty:
+                st.error(f"No summaty log file for this date")
+                return
         else:
             return
     df.error_line.fillna(' ', inplace = True)
     df1 = pd.pivot_table(df, index = ['categ','token'], columns='dt', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
-    
     dt_header = df1.columns[0]
-    df1 = df1.assign(Select = False).\
-        rename(columns={dt_header:str(dt_header)}) # remove error of columns as date
+    # st.write(dt_header)
+    df1 = df1.assign(Select = False).rename(columns={dt_header:str(dt_header)}) # remove error of columns as date
     need_details = st.data_editor(df1.reset_index())#, hide_index=True)
     opt= need_details.loc[need_details["Select"]==True]['token']
     if not opt.empty:

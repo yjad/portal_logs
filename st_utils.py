@@ -5,6 +5,10 @@ import io
 import os
 import DB as db
 
+LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\summary"
+PROJECT_DETAILS_FN = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\summary\Statistics_of_all_projects.xlsx"
+PROJECT_TYPES = {'وحدات سكنية':1,'أراضى':2, 'مشروع مكمل لأراضى':4}
+
 # @st.experimental_memo(suppress_st_warning=True)
 # @st.cache_data
 def upload_csv_files(csv_files):
@@ -78,16 +82,14 @@ def load_log_file(log_file_path):
 
 
 def load_log_summary(multi = False):
-    LOG_SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\summary"
-    # PROJECT_DETAILS_FN = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\checksum\Statistics_of_all_projects.xls"
-    PROJECT_TYPES = {'وحدات سكنية':1,'أراضى':2, 'مشروع مكمل لأراضى':4}
+
 
     # st.info(f"Loading projects ....")
 
     # if not os.path.exists(PROJECT_DETAILS_FN):
     #     st.error(f"Porjects' details file not exists: {PROJECT_DETAILS_FN}")
     #     return pd.DataFrame(), {}
-    
+
     projdf = (db.query_to_pd("project")
         .set_index('project_id')
         # .drop(columns=['index','Unnamed: 3','Unnamed: 11','Unnamed: 13'], axis=1)
@@ -136,3 +138,12 @@ def load_log_summary(multi = False):
     # dt_to =dts[-1]
         
     return logdf, proj_dict, dts
+
+
+def load_summary_log_date(log_date):
+    log_file_path = os.path.join(LOG_SUMMARY_FOLDER, f"log summary-{log_date}.zip")
+    if not os.path.exists(log_file_path):
+        return pd.DataFrame()   # empty
+    logdf = load_log_file(log_file_path)
+
+    return logdf

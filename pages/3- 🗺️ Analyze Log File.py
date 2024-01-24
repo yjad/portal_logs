@@ -188,7 +188,8 @@ def analyze_tech_log():
                 return
         else:
             return
-    df.error_line.fillna(' ', inplace = True)
+    # df.error_line.fillna(' ', inplace = True)
+    df.error_line = df.error_line.fillna(' ')
     df1 = pd.pivot_table(df, index = ['categ','token'], columns='dt', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
     dt_header = df1.columns[0]
     # st.write(dt_header)

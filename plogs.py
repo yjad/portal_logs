@@ -537,7 +537,9 @@ def get_reservation_nid(df):
     cust_nos = df.loc[df.token.isin(['confirmLandReservation True', 'confirmReservation True']), ['NID', 'log_date']].sort_values(['log_date', 'NID'])
     
     res_data = df.loc[df.NID.isin(cust_nos.NID), ['NID','log_date', 'token' ]]
-    res_data.token.loc[res_data.token == 'confirmLandReservation True'] = 'Land Reservation'
+    # 24-01-2024  
+    # res_data.token.loc[res_data.token == 'confirmLandReservation True'] = 'Land Reservation' 
+    res_data.loc[res_data.token == 'confirmLandReservation True', 'token'] = 'Land Reservation'
     
     # cust_list = cust_nos.NID + " --> Reservation time: " + cust_nos.log_date.dt.strptime('%Y-%m-%d %H:%M:%S')
     cust_list = cust_nos.NID + " --> Reservation time: " + cust_nos.log_date.astype(str)

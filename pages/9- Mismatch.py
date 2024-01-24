@@ -93,15 +93,20 @@ if not logdf.empty :   # a project selected
         else:
             le04 = (pd.read_excel(tibco_fn, skiprows=1, dtype={'الرقم القومى':str},)
                     .iloc[:,col_list].rename(rename_dict, axis=1))
-            
             # logdf = load_log_file(log_file_path, query_token) 
             def mmatch(x):
                 if 'Unit_No_db' in x.index:
-                    if x.Unit_No_db != x.Unit_No_log or \
-                        x.building_no_db != x.building_no_log or \
-                        x.Unit_Model_db != x.Unit_Model_log:
-                        return False
-                else:
+                    # 24-01-2024: Some projects have Unit-Model as nan 
+                    if 'Unit_Model_db' in x.index:  
+                        if x.Unit_No_db != x.Unit_No_log or \
+                            x.building_no_db != x.building_no_log or \
+                            x.Unit_Model_db != x.Unit_Model_log:
+                            return False
+                        else:
+                            if x.Unit_No_db != x.Unit_No_log or \
+                                x.building_no_db != x.building_no_log: 
+                                return False
+                else:   # Lands
                     try:
                         if x.Land_No_db != x.Land_No_log or \
                             x.land_size_db != x.land_size_log or \
@@ -115,6 +120,7 @@ if not logdf.empty :   # a project selected
                     
             # le04.columns
             # logdf.columns
+            
             df = (le04.merge(logdf, left_on='NID', right_on='NID', suffixes=('_db', '_log'))
                     .assign(match = lambda x: x.apply(mmatch, axis=1))
                 )

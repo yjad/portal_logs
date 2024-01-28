@@ -140,7 +140,8 @@ def yield_rar_file(rar_filename):
         try:
             rar_files = RarFile(io.BytesIO(rar_filename.read()))
         except: # home PC does not find le32
-            LOG_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Projects\Realestate Reservation Portal\5- Operation\Incident reports\change land-no\DB logs"
+            # LOG_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Projects\Realestate Reservation Portal\5- Operation\Incident reports\change land-no\DB logs"
+            LOG_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\DB-Log"
             rar_files = RarFile(os.path.join(LOG_DIR,rar_filename.name))
 
     for f in rar_files.infolist():

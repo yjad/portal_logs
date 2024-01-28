@@ -5,7 +5,8 @@ from os import path
 import dblogs
 import Home
 
-DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\DB-summary" 
+# DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Python-data\PortalLogs\DB-summary" 
+DATA_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\DB-summary" 
 
 
 def read_db_log(uploaded_files):
@@ -45,7 +46,7 @@ def read_db_log(uploaded_files):
     # return df
 
 def summarize_db_log():
-    uploaded_file= st.file_uploader('Select DB Log file',type=['zip','log', 'rar'], accept_multiple_files = False)
+    uploaded_file= st.file_uploader('Select DB Log file',type=['zip','log', 'rar', 'bz2'], accept_multiple_files = False)
     if st.button('Process ...') and uploaded_file:
         with st.spinner("Please Wait ... "):
             df = dblogs.zip_log_to_df(uploaded_file)
@@ -57,7 +58,8 @@ def summarize_db_log():
                 out_file_path = path.join(DATA_FOLDER, f"log summary-{dt_str}.zip")
                 df.to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"DBlog summary-{dt_str}.csv"})
                 st.success(f"File is summarized into '{out_file_path}'")
-
+            dfx= pd.pivot_table(df.query("cmd == 'CALL'"), index = 'proc_tbl', values = 'line_no', aggfunc='count', margins=False, fill_value=0).sort_index().reset_index()
+            st.dataframe(dfx)
 
 # @st.experimental_memo (suppress_st_warning=True)
 def load_dblog_summary(parse_date=False):
@@ -167,9 +169,19 @@ def quot_log_file(csv_fn, from_dttm,to_dttm):
     # df.to_csv(f'./out/dblog_from-to_{csv_fn}.csv', index=False )
 
 
+def db_log_summary():
+    df = load_dblog_summary()
+    if df.size != 0: 
+        dfx= pd.pivot_table(df.query("cmd == 'CALL'"), index = 'proc_tbl', values = 'line_no', aggfunc='count', margins=False, fill_value=0).sort_index().reset_index().\
+            rename({'proc_tbl': 'Procedure Name', 'line_no': 'Count'}, axis=1)
+        st.dataframe(dfx)
+
+    
+
 # 'query_type', 'cmd', 'proc_tbl', 'params'
 dblogs_options={'...':None, 
                 'Summarize DB log': summarize_db_log,
+                'DB log - Summary': db_log_summary,
                 'Quot log file from/to': quot_log_file,
                 'DBlogs by Query Type': dblog_by_query_type,
                 'DBlogs by Command': dblog_by_cmd,

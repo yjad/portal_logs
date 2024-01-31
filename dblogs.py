@@ -3,7 +3,7 @@ import os
 import zipfile, tarfile
 from datetime import datetime#, timedelta
 import pandas as pd
-# from plogs import yield_zip_file
+from plogs import yield_zip_file
 from rarfile import RarFile
 
 
@@ -26,8 +26,9 @@ def zip_log_to_df(zip_file):
     # with zipfile.ZipFile(zip_file, "r") as zf:
         # for fname in zf.namelist():
             # f = zf.open(fname) 
-    zfiles = yield_rar_file(zip_file)
-    for f in zfiles:
+    
+    zfiles = yield_zip_file(zip_file, file_type)
+    for f, file_size in zfiles:
         line_no = 0
         while True:
             txt = f.readline()
@@ -39,7 +40,8 @@ def zip_log_to_df(zip_file):
             # if line_no % 10000 == 0: print (line_no)
             if line_no % 10000 == 0: print (line_no)
             
-            txt = txt.decode('utf-8')
+            if type(txt) == bytes: txt= txt.decode('utf-8')
+            # txt = txt.decode('utf-8')
             rec= parse_db_log_line(line_no, txt)
             log_lst.append(rec)  
 
@@ -53,8 +55,12 @@ def parse_db_log_line(line_no, log_line):
     txt = log_line.replace('\n', '').replace ('\t', ' ')
     txt_lst = txt.split()
     txt_len = len(txt_lst)
-    # print (txt[:19])
-    dt = datetime.strptime(txt[:19], '%Y-%m-%dT%H:%M:%S')
+    try:
+        dt = datetime.strptime(txt[:19], '%Y-%m-%dT%H:%M:%S')
+    except:
+        print ('*** Invalid date format ***:', txt)
+        return [None]
+
     try:
         n= int(txt_lst[1])      #int(txt[35:39])
         query_type=txt_lst[2]   #txt_lst[39:45]
@@ -91,7 +97,7 @@ def parse_db_log_line(line_no, log_line):
             pass    #SELECT @com_mysql_jdbc_outparam_log_id
 
     return [line_no, dt, n, query_type, cmd, proc_tbl, params, log_line]
-
+# 
 
 def dblog_from_to(csv_fn, from_dttm,to_dttm):
     df1 = pd.read_csv(csv_fn, parse_dates=True)
@@ -131,32 +137,32 @@ def dblog_by_cmd(df, cmd):
     return tbl
 
 
-def yield_rar_file(rar_filename):
+# def yield_rar_file(rar_filename):
 
-    scan_data = pd.DataFrame()
-    if type(rar_filename) == str:
-        rar_files = RarFile(rar_filename)
-    else:   # UploadedFile object
-        try:
-            rar_files = RarFile(io.BytesIO(rar_filename.read()))
-        except: # home PC does not find le32
-            # LOG_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Projects\Realestate Reservation Portal\5- Operation\Incident reports\change land-no\DB logs"
-            LOG_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\DB-Log"
-            rar_files = RarFile(os.path.join(LOG_DIR,rar_filename.name))
+#     scan_data = pd.DataFrame()
+#     if type(rar_filename) == str:
+#         rar_files = RarFile(rar_filename)
+#     else:   # UploadedFile object
+#         try:
+#             rar_files = RarFile(io.BytesIO(rar_filename.read()))
+#         except: # home PC does not find le32
+#             # LOG_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\Projects\Realestate Reservation Portal\5- Operation\Incident reports\change land-no\DB logs"
+#             LOG_DIR = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\DB-Log"
+#             rar_files = RarFile(os.path.join(LOG_DIR,rar_filename.name))
 
-    for f in rar_files.infolist():
-        print (f.filename)
-        if f.is_dir():
-            print ("directory:", f.filename)
-            continue
+#     for f in rar_files.infolist():
+#         print (f.filename)
+#         if f.is_dir():
+#             print ("directory:", f.filename)
+#             continue
         
-        try:
-            rar_file = RarFile.open(rar_files, f.filename)
-        except Exception as err:    # io.UnsupportedOperation:
-            print (f.filename, f'err opening file: {err}')
-            continue
+#         try:
+#             rar_file = RarFile.open(rar_files, f.filename)
+#         except Exception as err:    # io.UnsupportedOperation:
+#             print (f.filename, f'err opening file: {err}')
+#             continue
 
-        yield rar_file        
+#         yield rar_file        
 
 
 if __name__ == '__main__':

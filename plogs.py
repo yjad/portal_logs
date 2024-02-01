@@ -1,19 +1,22 @@
 import json
 import os
+# import io
 from pickletools import int4
 from io import StringIO
-from sqlite3 import SQLITE_CREATE_INDEX
+# from sqlite3 import SQLITE_CREATE_INDEX
 import numpy as np
-import zipfile, tarfile
-from csv import QUOTE_ALL
+# import zipfile, tarfile
+# from csv import QUOTE_ALL
 import plog2
 import streamlit as st
-import py7zr
-import bz2
+# import py7zr
+# import bz2
+# from rarfile import RarFile
+from uncompress import yield_zip_file
 
 
 SUMMARY_FOLDER = r"C:\Users\yahia\OneDrive - Data and Transaction Services\DTS-data\PortalLogs\summary" 
-Z7_TMP_DIR = './out/z7_temp'
+
 
 # from numpy import int32
 import DB as db 
@@ -38,56 +41,8 @@ def resolve_log_files(file_path):
             log_files.append(os.path.join(folder,f))
     return log_files
 
-# -----------------------------
-# process one zip or tar file
-# -----------------------------
-def yield_zip_file(file_path, file_type):
 
-    match file_type:
-        case '.csv':
-            pass    # not supported
-        case '.zip':
-            with zipfile.ZipFile(file_path, "r") as zf:
-                for fname in zf.namelist():
-                    f = zf.open(fname) 
-                    yield f, zf.infolist()[0].file_size
-            
-        case '.gz': # tarfile
-            if type(file_path) == str:
-                file_name = file_path
-                file_obj = None
-            else:
-                file_name = None
-                file_obj = file_path
-            with tarfile.open(name  = file_name, fileobj = file_obj, mode = "r:gz") as tar:
-                for member in tar.getmembers():
-                    f=tar.extractfile(member)
-                    # st.write('file size:', member.size)
-                    # print (f.name)
-                    yield f, member.size
-        case '.7z':
-            if not os.path.exists(Z7_TMP_DIR):
-                os.mkdir(Z7_TMP_DIR)
-            with py7zr.SevenZipFile(file_path, mode='r') as zf:
-                zf.extractall(Z7_TMP_DIR)
-                for fname in os.listdir(Z7_TMP_DIR):
-                    file_path = os.path.join(Z7_TMP_DIR, fname)
-                    file_size = os.path.getsize()
-                    with open(file_path, 'rt', encoding= 'utf8') as f:
-                        yield f, file_size
-                    os.unlink(file_path)
 
-        case '.bz2':
-            if not os.path.exists(Z7_TMP_DIR):
-                os.mkdir(Z7_TMP_DIR)
-            with bz2.BZ2File(file_path, mode='r') as bz2f:
-                data = bz2f.read()              # get the decompressed data
-                newfilepath = os.path.join(Z7_TMP_DIR, file_path.name)
-                open(newfilepath, 'wb').write(data) # write an uncompressed file
-                file_size = os.path.getsize(newfilepath)
-                with open(newfilepath, 'rt', encoding= 'utf8') as f:
-                    yield f, file_size
-                os.unlink(newfilepath)
 
 # Process one zip file
 def zip_log_to_df(zip_file):

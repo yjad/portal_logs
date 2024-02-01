@@ -5,6 +5,7 @@ from datetime import datetime#, timedelta
 import pandas as pd
 from plogs import yield_zip_file
 from rarfile import RarFile
+import streamlit as st
 
 
 def zip_log_to_df(zip_file):
@@ -26,10 +27,17 @@ def zip_log_to_df(zip_file):
     # with zipfile.ZipFile(zip_file, "r") as zf:
         # for fname in zf.namelist():
             # f = zf.open(fname) 
-    
+    placeholder = st.empty()
     zfiles = yield_zip_file(zip_file, file_type)
     for f, file_size in zfiles:
         line_no = 0
+        if not file_size:   # file size is retruned from tar, calc it
+            f.seek(0,2) # end
+            file_size = f.tell()
+            # line_count = int(file_size/145)   # avrage 145 bytes/line
+            f.seek(0,0)     # set pointer to beginning of file
+        line_count = int(file_size/145)   # avrage 145 bytes/line
+        placeholder.write(f"{line_no:,}/{line_count:,} - {line_no/line_count:.2%}")
         while True:
             txt = f.readline()
             if not txt: break # end of file
@@ -38,16 +46,20 @@ def zip_log_to_df(zip_file):
             # if line_no > 100000: break
             # if line_no < 100000000: continue
             # if line_no % 10000 == 0: print (line_no)
-            if line_no % 10000 == 0: print (line_no)
+            if line_no % 40000 == 0: 
+                placeholder.write(f"{line_no:,}/{line_count:,} - {line_no/line_count:.2%}")
+                # print (line_no)
             
             if type(txt) == bytes: txt= txt.decode('utf-8')
             # txt = txt.decode('utf-8')
             rec= parse_db_log_line(line_no, txt)
-            log_lst.append(rec)  
+            if rec: # None value for invalid date/time format
+                log_lst.append(rec)  
 
         col = ['line_no', 'timestamp', 'n', 'query_type', 'cmd', 'proc_tbl', 'params', 'logLine']
         log_pd = pd.DataFrame(log_lst, columns = col)
-        print('Done ...')
+        placeholder.write(f"{line_no:,}/{line_count:,} - {line_no/line_count:.2%}")
+        st.write('Done ...')
         return log_pd
 
 
@@ -58,8 +70,8 @@ def parse_db_log_line(line_no, log_line):
     try:
         dt = datetime.strptime(txt[:19], '%Y-%m-%dT%H:%M:%S')
     except:
-        print ('*** Invalid date format ***:', txt)
-        return [None]
+        # print ('*** Invalid date format ***:', txt)
+        return None
 
     try:
         n= int(txt_lst[1])      #int(txt[35:39])

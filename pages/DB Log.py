@@ -50,18 +50,23 @@ def summarize_db_log():
     if st.button('Process ...') and uploaded_file:
         with st.spinner("Please Wait ... "):
             df = dblogs.zip_log_to_df(uploaded_file)
-            dts = df.timestamp.dt.date.unique()
-            st.write(dts)
-            
-            for i,dt in enumerate(dts): # split multi-date log file into a seperate zip csv file for each day 
-                # print ("+++++++++++ Date:", dt)
-                if dt is pd.NaT: continue    # None Date, skip
-                dt_str = str(dt)
-                out_file_path = path.join(DATA_FOLDER, f"log summary-{dt_str}.zip")
-                df.loc[df.timestamp.dt.date == dts[i]].to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"DBlog summary-{dt_str}.csv"})
-                st.success(f"File is summarized into '{out_file_path}'")
-            dfx= pd.pivot_table(df.query("cmd == 'CALL'"), index = 'proc_tbl', values = 'line_no', aggfunc='count', margins=False, fill_value=0).sort_index().reset_index()
-            st.dataframe(dfx)
+            if df.empty:
+                pass
+            else:
+                # st.error ("Invalid File format ...."+ uploaded_file.name)
+                # st.stop()
+                dts = df.timestamp.dt.date.unique()
+                st.write(dts)
+                
+                for i,dt in enumerate(dts): # split multi-date log file into a seperate zip csv file for each day 
+                    # print ("+++++++++++ Date:", dt)
+                    if dt is pd.NaT: continue    # None Date, skip
+                    dt_str = str(dt)
+                    out_file_path = path.join(DATA_FOLDER, f"log summary-{dt_str}.zip")
+                    df.loc[df.timestamp.dt.date == dts[i]].to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"DBlog summary-{dt_str}.csv"})
+                    st.success(f"File is summarized into '{out_file_path}'")
+                # dfx= pd.pivot_table(df.query("cmd == 'CALL'"), index = 'proc_tbl', values = 'line_no', aggfunc='count', margins=False, fill_value=0).sort_index().reset_index()
+                # st.dataframe(dfx)
 
 # @st.experimental_memo (suppress_st_warning=True)
 def load_dblog_summary(parse_date=False):
@@ -174,23 +179,25 @@ def quot_log_file(csv_fn, from_dttm,to_dttm):
 def db_log_summary():
     df = load_dblog_summary()
     if df.size == 0:
+        st.warning("No data to display")
         st.stop() 
-    option = st.radio("Select Option", horizontal=True,options= ['Summary', 'Time Series'])
+    option = st.radio("Select Option", horizontal=True,options= ['Summary', 'Time Graph'])
     if option== 'Summary':
         dfx= pd.pivot_table(df.query("cmd == 'CALL'"), index = 'proc_tbl', values = 'line_no', aggfunc='count', margins=False, fill_value=0).sort_index().reset_index().\
             rename({'proc_tbl': 'Procedure Name', 'line_no': 'Count'}, axis=1)
         st.dataframe(dfx)
-    elif option == 'Time Series':
+    elif option == 'Time Graph':
         proc_list = df.loc[df.cmd == 'CALL'].proc_tbl.unique()
         proc_name = st.sidebar.selectbox("Select Procedure:",proc_list)
         if proc_name:
             if 'timestamp2' not in df.columns:
                 df['timestamp2'] = pd.to_datetime(df.timestamp).dt.hour
-                chart_title = f'Timely call of procedure {proc_name}'
+            chart_title = f'Timely call of procedure {proc_name}'
             plot_x = df.loc[df.proc_tbl == proc_name, ['line_no', 'timestamp2']].rename({'line_no': 'No of Calls'}, axis=1).\
                 groupby('timestamp2').count().\
-                plot(xlabel='Hour', title = chart_title, figsize=(5,3)).get_figure()
-            st.pyplot(plot_x)
+                plot(xlabel='Time(Hour)', title = chart_title, figsize=(5,3)).get_figure()
+            col1, _ = st.columns(2)
+            col1.pyplot(plot_x)
     
 
 # 'query_type', 'cmd', 'proc_tbl', 'params'

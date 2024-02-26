@@ -172,17 +172,19 @@ def analyze_tech_log():
     
     # df, _,_, _= stu.upload_csv_files(csv_files)
     # df = pd.read_csv(csv_files, compression='zip', low_memory=False)
-    if st.checkbox("Reservation Log?",value=False):
+    col1, col2 = st.columns(2)
+    if col1.checkbox("Reservation Log?",value=False):
         df, _, _ = stu.load_log_summary(True)
         
         if df.empty: 
             st.info('#### No data to display')
             return
     else:
+        admin_log = col2.checkbox("Admin Logs?",value=False)
         # log_file_path = st.file_uploader("Select log file:", ["zip"], accept_multiple_files=False)
         log_date = st.date_input("Select log date:", value=None)
         if log_date:
-            df = stu.load_summary_log_date(log_date)
+            df = stu.load_summary_log_date(log_date, admin_log)
             if df.empty:
                 st.error(f"No summaty log file for this date")
                 return
@@ -190,6 +192,10 @@ def analyze_tech_log():
             return
     # df.error_line.fillna(' ', inplace = True)
     df.error_line = df.error_line.fillna(' ')
+    if 'categ' not in df.columns:   #case of admin logs
+        df['categ'] = ''
+        df['token'] = ''
+    st.write(df.columns)
     df1 = pd.pivot_table(df, index = ['categ','token'], columns='dt', values = 'line_no', aggfunc='count', margins=False, fill_value=0)
     dt_header = df1.columns[0]
     # st.write(dt_header)

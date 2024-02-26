@@ -306,7 +306,7 @@ def parse_tech_rec(txt, line_no, out_error, dt, log_type):
 
 
 # summerize log file(s). save summary to csv file with  
-def summerize_portal_logs(fpath, load_db=False):
+def summerize_portal_logs(fpath, admin=False):
     global Exception_File
 
     # log_df = log_2_df (fpath)
@@ -327,9 +327,13 @@ def summerize_portal_logs(fpath, load_db=False):
     # dts = sorted(log_df['log_date'].dt.date.unique())
     # for d in dts: # split multi-date log file into a seperate zip csv file for each day 
     d = log_df['log_date'].dt.date.unique()[0]
-    out_file_path = os.path.join(SUMMARY_FOLDER, f"log summary-{d}.zip")
+    if admin:
+        out_file_path = os.path.join(SUMMARY_FOLDER, f"log summary admin-{d}.zip")
+    else:
+        out_file_path = os.path.join(SUMMARY_FOLDER, f"log summary-{d}.zip")
        
         # df = log_df.loc[log_df.log_date.dt.date == d]
+        
     log_df.to_csv(out_file_path, index=False, compression={'method': 'zip', 'archive_name': f"log summary-{d}.csv"})
         # df.to_csv('./out/xx.csv', index=False)
         # update_summary_db(df)

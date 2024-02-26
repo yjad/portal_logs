@@ -140,8 +140,11 @@ def load_log_summary(multi = False):
     return logdf, proj_dict, dts
 
 
-def load_summary_log_date(log_date):
-    log_file_path = os.path.join(LOG_SUMMARY_FOLDER, f"log summary-{log_date}.zip")
+def load_summary_log_date(log_date, admin_log):
+    if admin_log:
+        log_file_path = os.path.join(LOG_SUMMARY_FOLDER, f"log summary admin-{log_date}.zip")
+    else:
+        log_file_path = os.path.join(LOG_SUMMARY_FOLDER, f"log summary-{log_date}.zip")
     if not os.path.exists(log_file_path):
         return pd.DataFrame()   # empty
     logdf = load_log_file(log_file_path)

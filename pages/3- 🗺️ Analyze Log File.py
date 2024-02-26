@@ -208,7 +208,11 @@ def analyze_tech_log():
         service = edited_df.loc[edited_df["get_details"]==True]['service']
         if not service.empty:
             df3= df.loc[df.service == service.iloc[0]]
+            # temp: to skip the error in displaying the df with BigUTF8 error
+            df3.to_csv('./out/df3.csv')
+            df3 = pd.read_csv('./out/df3.csv')
             st.dataframe(df3)
+
 
 options={   '...':None, 
             '0- Analyze log file': analyze_tech_log,

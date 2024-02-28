@@ -128,7 +128,22 @@ def res_by_gov():
     st.dataframe(dfoo)
 
 def log_details_by_NID():
-    df, _, _ = stu.load_log_summary(False)
+    if st.checkbox("Reservation Log?",value=False):
+        df, _, _ = stu.load_log_summary(False)
+        
+        if df.empty: 
+            st.info('#### No data to display')
+            return
+    else:
+        log_date = st.date_input("Select log date:", value=None)
+        if log_date:
+            df = stu.load_summary_log_date(log_date, False)
+            if df.empty:
+                st.error(f"No summaty log file for this date")
+                return
+        else:
+            return
+    # df, _, _ = stu.load_log_summary(False)
     if df.shape[0] != 0 :
         search_by =st.radio("Search By", ["National ID", "IP Address"], horizontal=True)
         NID = st.text_input('xxx', placeholder=search_by, label_visibility='hidden')
@@ -141,8 +156,12 @@ def log_details_by_NID():
             q= f"{col} == '{NID}'"
 
             NID_df = df.query(q)[['log_date', 'NID', 'IP_address', 'token']]
-            st.dataframe(NID_df)
-            st.download_button(label = 'Save to csv', data = stu.convert_df(NID_df), file_name = f'log_data_NID_{NID}.csv', mime = 'text/csv')
+            if NID_df.empty:
+                st.error("No logs for this NID")
+            else:
+                NID_df.NID = df.NID.astype(str)     # fix error of BIGUTF8
+                st.dataframe(NID_df)
+                st.download_button(label = 'Save to csv', data = stu.convert_df(NID_df), file_name = f'log_data_NID_{NID}.csv', mime = 'text/csv')
 
 def log_DB_logins():
     st.subheader('# of Logins/# of Paid Customers')
